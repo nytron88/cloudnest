@@ -101,7 +101,7 @@ export default function Home() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Start with Our Free Tier</h2>
           <p className="text-muted-foreground">
-            Get started with 5GB of free storage. Upgrade anytime as your needs grow.
+            Get started with 1GB of free storage. Upgrade anytime as your needs grow.
           </p>
         </div>
         <div className="max-w-md mx-auto">
@@ -114,7 +114,7 @@ export default function Home() {
               <div className="text-3xl font-bold mb-4">$0<span className="text-lg font-normal text-muted-foreground">/month</span></div>
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center">
-                  <span className="mr-2">✓</span> 5GB Storage
+                  <span className="mr-2">✓</span> 1GB Storage
                 </li>
                 <li className="flex items-center">
                   <span className="mr-2">✓</span> Basic Features
@@ -127,7 +127,7 @@ export default function Home() {
                 <Button className="w-full">Get Started</Button>
               </Link>
               <p className="text-sm text-muted-foreground text-center mt-4">
-                Need more? Upgrade to Pro plan anytime for 100GB storage and premium features.
+                Need more? Upgrade to Pro plan anytime for 50GB storage and premium features.
               </p>
             </CardContent>
           </Card>
