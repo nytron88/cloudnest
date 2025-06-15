@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import logger from "./logger";
 import { errorResponse } from "./responseWrapper";
-// import { Prisma } from "@/prisma/client";
+import { Prisma } from "@prisma/client";
 
 export type ContextWithId = { params: { id: string } };
 
@@ -51,18 +51,18 @@ export function withLoggerAndErrorHandler(handler: Handler): Handler {
       });
 
       // Handle Prisma-specific errors
-      //   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      //     return errorResponse("Database error", 400, {
-      //       code: error.code,
-      //       message: error.message,
-      //     });
-      //   }
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        return errorResponse("Database error", 400, {
+          code: error.code,
+          message: error.message,
+        });
+      }
 
-      //   if (error instanceof Prisma.PrismaClientValidationError) {
-      //     return errorResponse("Invalid data provided", 400, {
-      //       message: error.message,
-      //     });
-      //   }
+      if (error instanceof Prisma.PrismaClientValidationError) {
+        return errorResponse("Invalid data provided", 400, {
+          message: error.message,
+        });
+      }
 
       if (error instanceof SyntaxError) {
         return errorResponse("Invalid JSON in request body", 400, {

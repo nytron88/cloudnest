@@ -46,7 +46,7 @@ model File {
   name           String
   path           String
   size           Int
-  type           String
+  type           FileType
   isTrash        Boolean        @default(false)
   isStarred      Boolean        @default(false)
 
@@ -89,4 +89,12 @@ enum SubscriptionPlan {
 enum SubscriptionStatus {
   ACTIVE
   CANCELLED
+}
+enum FileType {
+  IMAGE
+  VIDEO
+  AUDIO
+  PDF
+  DOCUMENT
+  OTHER
 }
