@@ -1,15 +1,92 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String         @id
+  email          String         @unique
+
+  files          File[]
+  folders        Folder[]
+  subscription   Subscription?
+
+  usedStorage    Int            @default(0)
+  
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model Folder {
+  id             String         @id @default(cuid())
+  name           String
+  path           String
+  isTrash        Boolean        @default(false)
+  isStarred      Boolean        @default(false)
+
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+
+  parentId       String?
+  parent         Folder?        @relation("FolderHierarchy", fields: [parentId], references: [id])
+  children       Folder[]       @relation("FolderHierarchy")
+
+  files          File[]
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+model File {
+  id             String         @id @default(cuid())
+  name           String
+  path           String
+  size           Int
+  type           String
+  isTrash        Boolean        @default(false)
+  isStarred      Boolean        @default(false)
+
+  fileUrl        String
+  thumbnailUrl   String?
+  imagekitFileId String         @unique
+
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+
+  folderId       String?
+  folder         Folder?        @relation(fields: [folderId], references: [id])
+
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+}
+
+
+model Subscription {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id])
+
+  plan                   SubscriptionPlan
+  status                 SubscriptionStatus
+  stripeCustomerId       String?
+  stripeSubscriptionId   String?
+  stripePriceId          String?
+  currentPeriodEnd       DateTime?
+
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
 }
