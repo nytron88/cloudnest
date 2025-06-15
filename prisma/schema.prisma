@@ -14,6 +14,7 @@ model User {
   files          File[]
   folders        Folder[]
   subscription   Subscription?
+  sharedLinks    SharedLink[]
 
   usedStorage    Int            @default(0)
   
@@ -25,6 +26,7 @@ model Folder {
   id             String         @id @default(cuid())
   name           String
   path           String
+
   isTrash        Boolean        @default(false)
   isStarred      Boolean        @default(false)
 
@@ -36,9 +38,15 @@ model Folder {
   children       Folder[]       @relation("FolderHierarchy")
 
   files          File[]
+  sharedLinks    SharedLink[]
 
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([path])
+  @@index([isTrash])
+  @@index([parentId])
 }
 
 model File {
@@ -47,6 +55,7 @@ model File {
   path           String
   size           Int
   type           FileType
+
   isTrash        Boolean        @default(false)
   isStarred      Boolean        @default(false)
 
@@ -60,10 +69,42 @@ model File {
   folderId       String?
   folder         Folder?        @relation(fields: [folderId], references: [id])
 
+  sharedLinks    SharedLink[]
+
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([folderId])
+  @@index([path])
+  @@index([isTrash])
+  @@index([type])
 }
 
+model SharedLink {
+  id         String   @id @default(cuid())
+  token      String   @unique
+
+  fileId     String?
+  folderId   String?
+
+  file       File?    @relation(fields: [fileId], references: [id])
+  folder     Folder?  @relation(fields: [folderId], references: [id])
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+
+  password   String?
+  expiresAt  DateTime?
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([fileId])
+  @@index([folderId])
+  @@index([expiresAt])
+}
 
 model Subscription {
   id                     String    @id @default(cuid())
@@ -72,13 +113,17 @@ model Subscription {
 
   plan                   SubscriptionPlan
   status                 SubscriptionStatus
+
   stripeCustomerId       String?
   stripeSubscriptionId   String?
   stripePriceId          String?
   currentPeriodEnd       DateTime?
 
   createdAt              DateTime   @default(now())
-  updatedAt              DateTime   @updatedAt
+  updatedAt              DateTime   @default(now())
+
+  @@index([status])
+  @@index([plan])
 }
 
 enum SubscriptionPlan {
@@ -90,6 +135,7 @@ enum SubscriptionStatus {
   ACTIVE
   CANCELLED
 }
+
 enum FileType {
   IMAGE
   VIDEO
