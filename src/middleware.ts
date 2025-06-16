@@ -5,7 +5,7 @@ import { errorResponse } from "./lib/responseWrapper";
 const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)", "/"]);
 
 const isPublicApiRoute = createRouteMatcher([
-  "/api/webhooks(.*)",
+  "/api/webhook(.*)",
   "/api/health",
 ]);
 

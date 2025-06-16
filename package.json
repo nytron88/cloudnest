@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "tunnel": "ngrok http 3000"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.22.0",
@@ -23,6 +24,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "sonner": "^2.0.5",
+    "svix": "^1.67.0",
     "tailwind-merge": "^3.3.1",
     "winston": "^3.17.0",
     "zod": "^3.25.64"

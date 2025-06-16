@@ -112,7 +112,6 @@ model Subscription {
   user                   User      @relation(fields: [userId], references: [id])
 
   plan                   SubscriptionPlan
-  status                 SubscriptionStatus
 
   stripeCustomerId       String?
   stripeSubscriptionId   String?
@@ -120,20 +119,14 @@ model Subscription {
   currentPeriodEnd       DateTime?
 
   createdAt              DateTime   @default(now())
-  updatedAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
 
-  @@index([status])
   @@index([plan])
 }
 
 enum SubscriptionPlan {
   FREE
   PRO
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  CANCELLED
 }
 
 enum FileType {

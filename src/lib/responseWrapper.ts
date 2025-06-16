@@ -3,8 +3,8 @@ import { APIResponse } from "@/types/apiResponse";
 
 export function successResponse<T>(
   message = "Request successful",
-  data?: T,
-  status = 200
+  status = 200,
+  data?: T
 ) {
   const responseBody: APIResponse<T> = {
     success: true,
