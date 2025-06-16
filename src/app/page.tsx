@@ -18,13 +18,13 @@ export default function Home() {
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="flex flex-col items-center text-center space-y-8">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center ">
             <Image
               src="/favicon.ico"
               alt="CloudNest Logo"
-              width={48}
-              height={48}
-              className="rounded-lg"
+              width={72}
+              height={72}
+              className="rounded-lg object-contain mt-1.5"
             />
             <h1 className="text-4xl font-bold tracking-tight">CloudNest</h1>
           </div>

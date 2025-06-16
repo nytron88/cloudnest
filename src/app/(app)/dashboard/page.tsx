@@ -2,9 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserButton } from "@clerk/nextjs";
-import { ModeToggle } from "@/components/layout/theme-toggle";
-import { Cloud, Upload, FileText, Settings } from "lucide-react";
+import { Upload, FileText, Settings } from "lucide-react";
 
 export default async function DashboardPage() {
     const { userId } = await auth();
@@ -15,20 +13,6 @@ export default async function DashboardPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Header */}
-            <header className="border-b">
-                <div className="container max-w-6xl mx-auto flex h-16 items-center justify-between px-4">
-                    <div className="flex items-center space-x-2">
-                        <Cloud className="h-6 w-6 text-primary" />
-                        <h1 className="text-xl font-semibold">CloudNest</h1>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                        <ModeToggle />
-                        <UserButton afterSignOutUrl="/" />
-                    </div>
-                </div>
-            </header>
-
             {/* Main Content */}
             <div className="container max-w-6xl mx-auto px-4 py-8">
                 <div className="mb-8">
