@@ -32,12 +32,12 @@ export default function Home() {
             Your secure cloud storage solution. Store, access, and share your files with ease.
           </p>
           <div className="flex gap-4">
-            <Link href="/auth/signup">
+            <Link href="/sign-up">
               <Button size="lg" className="gap-2">
                 Get Started <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/auth/signin">
+            <Link href="/sign-in">
               <Button size="lg" variant="outline">
                 Sign In
               </Button>
@@ -123,7 +123,7 @@ export default function Home() {
                   <span className="mr-2">✓</span> Community Support
                 </li>
               </ul>
-              <Link href="/auth/signup">
+              <Link href="/sign-up">
                 <Button className="w-full">Get Started</Button>
               </Link>
               <p className="text-sm text-muted-foreground text-center mt-4">
