@@ -1,0 +1,152 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check } from "lucide-react";
+import { SubscriptionPlan } from "@/types/subscription";
+
+interface PricingSectionProps {
+  plans: SubscriptionPlan[];
+}
+
+export function PricingSection({ plans }: PricingSectionProps) {
+  const [selectedInterval, setSelectedInterval] = useState<"month" | "year">("month");
+
+  // Filter and sort plans by selected interval
+  const filteredPlans = plans
+    .filter(plan => plan.interval === selectedInterval)
+    .sort((a, b) => a.price - b.price);
+
+  return (
+    <div className="container mx-auto px-4 py-16">
+      <div className="text-center mb-12">
+        <h2 className="text-3xl font-bold mb-4">Choose Your Plan</h2>
+        <p className="text-muted-foreground mb-8">
+          Start with our free tier or upgrade to a premium plan for more storage and features.
+        </p>
+
+        {/* Billing Toggle */}
+        <div className="inline-flex items-center bg-muted rounded-lg p-1 mb-8">
+          <button
+            onClick={() => setSelectedInterval("month")}
+            className={`px-6 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${selectedInterval === "month"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
+          >
+            Monthly
+          </button>
+          <button
+            onClick={() => setSelectedInterval("year")}
+            className={`px-6 py-2 rounded-md text-sm font-medium transition-all cursor-pointer ${selectedInterval === "year"
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+              }`}
+          >
+            Yearly
+            <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+              Save 20%
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div className={`grid gap-6 lg:gap-8 mx-auto justify-center ${filteredPlans.length === 0
+        ? "grid-cols-1 max-w-sm"
+        : filteredPlans.length === 1
+          ? "grid-cols-1 md:grid-cols-2 max-w-2xl"
+          : filteredPlans.length === 2
+            ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-4xl"
+            : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-6xl"
+        }`}>
+        {/* Free Tier */}
+        <Card className="relative border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300 w-full max-w-sm justify-self-center h-[380px] flex flex-col bg-gradient-to-b from-background to-muted/20">
+          <CardHeader className="text-center pb-2 h-[100px] flex flex-col justify-center pt-4">
+            <CardTitle className="text-2xl font-bold">Free</CardTitle>
+            <div className="text-4xl font-bold py-2">
+              $0<span className="text-lg font-normal text-muted-foreground">/{selectedInterval}</span>
+              <div className="h-4"></div>
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col px-6 pb-6">
+            <ul className="space-y-1 flex-1">
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                <span className="text-sm">1GB Storage</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                <span className="text-sm">Basic File Upload</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                <span className="text-sm">Advanced Security</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                <span className="text-sm">Web Access</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                <span className="text-sm">File Sharing & Links</span>
+              </li>
+            </ul>
+            <div className="mt-4">
+              <Link href="/sign-up" className="block">
+                <Button className="w-full">Get Started Free</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Dynamic Subscription Plans */}
+        {filteredPlans.map((plan, index) => (
+          <Card key={plan.id} className="relative border-2 hover:border-primary/20 hover:shadow-lg transition-all duration-300 w-full max-w-sm justify-self-center h-[380px] flex flex-col bg-gradient-to-b from-background to-muted/20">
+            {index === 0 && (
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-medium">
+                  Most Popular
+                </span>
+              </div>
+            )}
+            <CardHeader className="text-center pb-2 h-[100px] flex flex-col justify-center pt-4">
+              <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
+              <div className="text-4xl font-bold py-2">
+                {plan.formattedPrice}
+                <span className="text-lg font-normal text-muted-foreground">/{plan.interval}</span>
+                <div className="h-4"></div>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col px-6 pb-6">
+              <ul className="space-y-1 flex-1">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  <span className="text-sm">Everything in Free</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  <span className="text-sm">{plan.interval === 'year' ? '1TB' : '50GB'} Storage</span>
+                </li>
+                {plan.interval === 'year' && (
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    <span className="text-sm">Save 20% and get extra storage vs monthly</span>
+                  </li>
+                )}
+              </ul>
+              <div className="mt-4">
+                <Link href="/sign-up" className="block">
+                  <Button className="w-full">
+                    Choose {plan.name}
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+} 

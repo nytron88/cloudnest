@@ -28,8 +28,8 @@ export default function AppLayout({
                             <Image
                                 src="/favicon.ico"
                                 alt="CloudNest"
-                                width={48}
-                                height={48}
+                                width={54}
+                                height={54}
                                 className="object-contain"
                             />
                             <h1 className="text-xl font-bold tracking-tight">CloudNest</h1>
@@ -50,7 +50,6 @@ export default function AppLayout({
                         <div className="flex items-center space-x-3 border-l pl-6">
                             <ModeToggle />
                             <UserButton
-                                afterSignOutUrl="/"
                                 appearance={{
                                     elements: {
                                         avatarBox: "w-8 h-8"

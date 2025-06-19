@@ -4,13 +4,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, Cloud, Lock, Zap } from "lucide-react";
 import { ModeToggle } from "@/components/layout/theme-toggle";
+import { getSubscriptionPlans } from "@/lib/actions/getSubscriptionPlans.server";
+import { PricingSection } from "@/components/landing-page/pricing-section";
 
-export default function Home() {
+export const revalidate = 3600;
+
+export default async function Home() {
+  const subscriptionPlans = await getSubscriptionPlans();
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header with Theme Toggle */}
+      {/* Header with Logo and Theme Toggle */}
       <div className="container mx-auto px-4 py-4">
-        <div className="flex justify-end">
+        <div className="flex justify-between items-center">
+          <Image
+            src="/favicon.ico"
+            alt="CloudNest Logo"
+            width={54}
+            height={54}
+            className="rounded-lg object-contain"
+          />
           <ModeToggle />
         </div>
       </div>
@@ -18,16 +31,7 @@ export default function Home() {
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="flex flex-col items-center text-center space-y-8">
-          <div className="flex items-center ">
-            <Image
-              src="/favicon.ico"
-              alt="CloudNest Logo"
-              width={72}
-              height={72}
-              className="rounded-lg object-contain mt-1.5"
-            />
-            <h1 className="text-4xl font-bold tracking-tight">CloudNest</h1>
-          </div>
+          <h1 className="text-4xl font-bold tracking-tight">CloudNest</h1>
           <p className="text-xl text-muted-foreground max-w-2xl">
             Your secure cloud storage solution. Store, access, and share your files with ease.
           </p>
@@ -96,43 +100,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Free Tier Section */}
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Start with Our Free Tier</h2>
-          <p className="text-muted-foreground">
-            Get started with 1GB of free storage. Upgrade anytime as your needs grow.
-          </p>
-        </div>
-        <div className="max-w-md mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle>Free Storage</CardTitle>
-              <CardDescription>Everything you need to get started</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold mb-4">$0<span className="text-lg font-normal text-muted-foreground">/month</span></div>
-              <ul className="space-y-2 mb-6">
-                <li className="flex items-center">
-                  <span className="mr-2">✓</span> 1GB Storage
-                </li>
-                <li className="flex items-center">
-                  <span className="mr-2">✓</span> Basic Features
-                </li>
-                <li className="flex items-center">
-                  <span className="mr-2">✓</span> Community Support
-                </li>
-              </ul>
-              <Link href="/sign-up">
-                <Button className="w-full">Get Started</Button>
-              </Link>
-              <p className="text-sm text-muted-foreground text-center mt-4">
-                Need more? Upgrade to Pro plan anytime for 50GB storage and premium features.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* Pricing Section */}
+      <PricingSection plans={subscriptionPlans} />
     </div>
   );
 }
