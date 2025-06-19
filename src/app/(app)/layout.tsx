@@ -20,19 +20,44 @@ export default function AppLayout({
     return (
         <div className="min-h-screen bg-background">
             {/* Header */}
-            <header className="border-b">
+            <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
                 <div className="container max-w-6xl mx-auto flex h-16 items-center justify-between px-4">
+                    {/* Logo Section */}
                     <div className="flex items-center space-x-3">
-                        <Link href="/dashboard">
-                            <div className="flex items-center justify-center">
-                                <Image src="/favicon.ico" alt="CloudNest" width={60} height={60} className="object-contain mt-1" />
-                                <h1 className="text-xl font-semibold">CloudNest</h1>
-                            </div>
+                        <Link href="/dashboard" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                            <Image
+                                src="/favicon.ico"
+                                alt="CloudNest"
+                                width={48}
+                                height={48}
+                                className="object-contain"
+                            />
+                            <h1 className="text-xl font-bold tracking-tight">CloudNest</h1>
                         </Link>
                     </div>
-                    <div className="flex items-center space-x-4">
-                        <ModeToggle />
-                        <UserButton afterSignOutUrl="/" />
+
+                    {/* Navigation & Actions */}
+                    <div className="flex items-center space-x-6">
+                        <nav className="hidden sm:flex">
+                            <Link
+                                href="/subscription"
+                                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent hover:rounded-md transition-all duration-200"
+                            >
+                                Manage Subscription
+                            </Link>
+                        </nav>
+
+                        <div className="flex items-center space-x-3 border-l pl-6">
+                            <ModeToggle />
+                            <UserButton
+                                afterSignOutUrl="/"
+                                appearance={{
+                                    elements: {
+                                        avatarBox: "w-8 h-8"
+                                    }
+                                }}
+                            />
+                        </div>
                     </div>
                 </div>
             </header>
