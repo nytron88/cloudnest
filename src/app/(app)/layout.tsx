@@ -40,7 +40,14 @@ export default function AppLayout({
                     <div className="flex items-center space-x-6">
                         <nav className="hidden sm:flex">
                             <Link
-                                href="/subscription"
+                                href="/pricing"
+                                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent hover:rounded-md transition-all duration-200"
+                            >
+                                Pricing
+                            </Link>
+                            {/* TODO: Add a link to the manage subscription page from stripe */}
+                            <Link
+                                href=""
                                 className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent hover:rounded-md transition-all duration-200"
                             >
                                 Manage Subscription
