@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { getSubscriptionPlans } from "@/lib/actions/getSubscriptionPlans.server";
-import { PricingSection } from "@/components/landing-page/pricing-section";
+import { getUserSubscription } from "@/lib/actions/getUserSubscription.server";
+import { PricingSection } from "@/components/pricing-section";
 import { FAQSection } from "@/components/faq-section";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Zap, Cloud, Users, Globe } from "lucide-react";
@@ -15,9 +16,9 @@ export const revalidate = 3600;
 export default async function PricingPage() {
   const subscriptionPlans = await getSubscriptionPlans();
 
-  // TODO: Get user's current plan from database/session
-  // const currentPlanId = await getCurrentUserPlan();
-  const currentPlanId = null; // Placeholder - replace with actual user plan logic
+  // Get user's current subscription
+  const userSubscription = await getUserSubscription();
+  const currentPlanId = userSubscription?.stripePriceId || null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -115,8 +116,6 @@ export default async function PricingPage() {
           }
         ]}
       />
-
-
     </div>
   );
 }

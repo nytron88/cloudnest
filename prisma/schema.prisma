@@ -127,6 +127,7 @@ model Subscription {
 enum SubscriptionPlan {
   FREE
   PRO
+  PRO_YEARLY
 }
 
 enum FileType {
