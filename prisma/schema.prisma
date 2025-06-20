@@ -107,15 +107,15 @@ model SharedLink {
 }
 
 model Subscription {
-  id                     String    @id @default(cuid())
-  userId                 String    @unique
-  user                   User      @relation(fields: [userId], references: [id])
+  id                     String     @id @default(cuid())
+  userId                 String     @unique
+  user                   User       @relation(fields: [userId], references: [id])
 
   plan                   SubscriptionPlan
 
-  stripeCustomerId       String?
-  stripeSubscriptionId   String?
-  stripePriceId          String?
+  stripeCustomerId       String?    @unique
+  stripeSubscriptionId   String?    @unique
+  stripePriceId          String?    @unique
   currentPeriodEnd       DateTime?
 
   createdAt              DateTime   @default(now())
