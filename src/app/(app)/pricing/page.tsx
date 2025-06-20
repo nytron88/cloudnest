@@ -104,11 +104,15 @@ export default async function PricingPage() {
         faqs={[
           {
             question: "Can I change my plan anytime?",
-            answer: "You can change after the current one is finished and cancel any future ones through manage subscription page."
+            answer: "You can change your plan anytime, but the new plan will take effect after the current billing period ends."
+          },
+          {
+            question: "What happens if I cancel my subscription?",
+            answer: "You can cancel your subscription at any time. Your account will remain active until the end of your current billing period."
           },
           {
             question: "What happens if I exceed my storage?",
-            answer: "We'll notify you when you're approaching your limit. You can upgrade your plan or remove files to free up space."
+            answer: "We'll notify you when you're approaching your limit. Unfortunately, you can't buy more storage, but you can remove files to free up space. You can also wait for the next billing period to start and upgrade depending on your plan."
           },
           {
             question: "Is my data secure?",
