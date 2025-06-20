@@ -11,7 +11,10 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     return errorResponse("Price ID is required", 400);
   }
 
-  const origin = request.headers.get("origin");
+  const origin =
+    request.headers.get("origin") ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "http://localhost:3000";
 
   if (!origin) {
     return errorResponse("Origin is required", 400);

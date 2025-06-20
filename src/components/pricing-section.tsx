@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { SubscriptionPlan } from "@/types/subscription";
-import { StripeCreateCheckoutSessionResponse } from "@/types/stripe";
+import { StripeCreateCheckoutSessionResponse, StripeCreatePortalSessionResponse } from "@/types/stripe";
 import { APIResponse } from "@/types/apiResponse";
 import axios from "axios";
 import { toast } from "sonner";
@@ -52,8 +52,22 @@ export function PricingSection({ plans, currentPlanId }: PricingSectionProps) {
     }
   };
 
-  const handleManageSubscription = async (planId: string) => {
-    // TODO: Implement this
+  const handleManageSubscription = async () => {
+    try {
+      const res = await axios.post<APIResponse<StripeCreatePortalSessionResponse>>("/api/stripe/create-portal-session");
+
+      if (res.data?.payload?.url) {
+        window.location.href = res.data.payload.url;
+      } else {
+        toast.error("Failed to create portal session", {
+          description: "Please try again later"
+        });
+      }
+    } catch (err: any) {
+      toast.error("Error creating portal session", {
+        description: err.response?.data?.message || "Please check your connection and try again"
+      });
+    };
   };
 
   return (
@@ -139,7 +153,7 @@ export function PricingSection({ plans, currentPlanId }: PricingSectionProps) {
                 <Button
                   className="w-full"
                   variant="outline"
-                  onClick={() => handleManageSubscription("free")}
+                  onClick={() => handleManageSubscription()}
                 >
                   Downgrade to Free
                 </Button>
@@ -198,7 +212,7 @@ export function PricingSection({ plans, currentPlanId }: PricingSectionProps) {
                     // User has a paid plan, show manage subscription button for other plans
                     <Button
                       className="w-full"
-                      onClick={() => handleManageSubscription(plan.id)}
+                      onClick={() => handleManageSubscription()}
                     >
                       Manage Subscription
                     </Button>
@@ -224,6 +238,6 @@ export function PricingSection({ plans, currentPlanId }: PricingSectionProps) {
           );
         })}
       </div>
-    </div>
+    </div >
   );
 } 

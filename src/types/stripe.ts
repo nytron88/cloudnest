@@ -5,3 +5,7 @@ export type StripeCreateCheckoutSessionResponse = {
 };
 
 export type StripeCheckoutSession = Stripe.Checkout.Session;
+
+export type StripeCreatePortalSessionResponse = {
+  url: string;
+};
