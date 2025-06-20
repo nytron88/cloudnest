@@ -4,12 +4,12 @@ import { APIResponse } from "@/types/apiResponse";
 export function successResponse<T>(
   message = "Request successful",
   status = 200,
-  data?: T
+  payload?: T
 ) {
   const responseBody: APIResponse<T> = {
     success: true,
     message,
-    ...(data !== undefined && { data }),
+    ...(payload !== undefined && { payload }),
   };
 
   return NextResponse.json(responseBody, { status });

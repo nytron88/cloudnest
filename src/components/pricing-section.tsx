@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { SubscriptionPlan } from "@/types/subscription";
+import { StripeCreateCheckoutSessionResponse } from "@/types/stripe";
+import { APIResponse } from "@/types/apiResponse";
+import axios from "axios";
+import { toast } from "sonner";
+import { stripePromise } from "@/lib/stripe-client";
 
 interface PricingSectionProps {
   plans: SubscriptionPlan[];
@@ -20,9 +25,35 @@ export function PricingSection({ plans, currentPlanId }: PricingSectionProps) {
     .filter(plan => plan.interval === selectedInterval)
     .sort((a, b) => a.price - b.price);
 
-  const handlePlanClick = (planId: string) => {
-    // TODO: Replace with Stripe customer portal URL
-    window.location.href = "";
+  const handlePlanClick = async (planId: string) => {
+    const stripe = await stripePromise;
+    try {
+      const res = await axios.post<APIResponse<StripeCreateCheckoutSessionResponse>>("/api/stripe/create-checkout-session", {
+        priceId: planId,
+      });
+
+      if (res.data?.payload?.id) {
+        const result = await stripe?.redirectToCheckout({ sessionId: res.data.payload.id });
+
+        if (result?.error) {
+          toast.error("Stripe redirect failed", {
+            description: result.error.message || "Please try again later"
+          });
+        }
+      } else {
+        toast.error("Failed to create checkout session", {
+          description: "Please try again later"
+        });
+      }
+    } catch (err: any) {
+      toast.error("Error creating checkout session", {
+        description: err.response?.data?.message || "Please check your connection and try again"
+      });
+    }
+  };
+
+  const handleManageSubscription = async (planId: string) => {
+    // TODO: Implement this
   };
 
   return (
@@ -104,6 +135,14 @@ export function PricingSection({ plans, currentPlanId }: PricingSectionProps) {
                 <Button className="w-full" disabled>
                   Current Plan
                 </Button>
+              ) : currentPlanId ? (
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => handleManageSubscription("free")}
+                >
+                  Downgrade to Free
+                </Button>
               ) : (
                 <Link href="/sign-up" className="block">
                   <Button className="w-full">Get Started Free</Button>
@@ -156,15 +195,23 @@ export function PricingSection({ plans, currentPlanId }: PricingSectionProps) {
                       Current Plan
                     </Button>
                   ) : currentPlanId ? (
-                    // User has a plan, show manage subscription button for other plans
+                    // User has a paid plan, show manage subscription button for other plans
+                    <Button
+                      className="w-full"
+                      onClick={() => handleManageSubscription(plan.id)}
+                    >
+                      Manage Subscription
+                    </Button>
+                  ) : currentPlanId === null ? (
+                    // User is authenticated but on free tier, show create new subscription
                     <Button
                       className="w-full"
                       onClick={() => handlePlanClick(plan.id)}
                     >
-                      Manage Subscription
+                      Choose {plan.name}
                     </Button>
                   ) : (
-                    // User has no plan, show sign up
+                    // User is not authenticated, show sign up
                     <Link href="/sign-up" className="block">
                       <Button className="w-full">
                         Choose {plan.name}

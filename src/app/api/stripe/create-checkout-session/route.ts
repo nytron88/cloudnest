@@ -2,7 +2,7 @@ import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
 import { successResponse, errorResponse } from "@/lib/responseWrapper";
 import stripe from "@/lib/stripe";
 import type { NextRequest } from "next/server";
-import type { StripeSession } from "@/types/stripe";
+import type { StripeCreateCheckoutSessionResponse } from "@/types/stripe";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const { priceId } = await request.json();
@@ -27,12 +27,14 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
       },
     ],
     success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/subscriptions`,
+    cancel_url: `${origin}/pricing`,
   });
 
-  return successResponse<StripeSession>(
+  return successResponse<StripeCreateCheckoutSessionResponse>(
     "Checkout session created",
     200,
-    session
+    {
+      id: session.id,
+    }
   );
 });

@@ -1,3 +1,3 @@
-import type Stripe from "stripe";
-
-export type StripeSession = Stripe.Checkout.Session;
+export type StripeCreateCheckoutSessionResponse = {
+  id: string;
+};
