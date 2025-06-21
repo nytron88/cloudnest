@@ -22,7 +22,8 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
       subscriptionId: subscription.id,
       eventType: "customer.subscription.created",
     });
-    return successResponse("Missing userId metadata", 200);
+
+    return errorResponse("Missing userId metadata", 400);
   }
 
   const existing = await prisma.subscription.findUnique({
@@ -70,7 +71,7 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
     });
   }
 
-  return successResponse("Subscription created handled", 200);
+  return null;
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
@@ -86,10 +87,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       eventType: "customer.subscription.updated",
     });
 
-    return successResponse(
-      "No matching subscription; probably not created yet.",
-      200
-    );
+    return errorResponse("No matching subscription found", 404);
   }
 
   const priceId = subscription.items.data[0]?.price.id;
@@ -122,7 +120,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     eventType: "customer.subscription.updated",
   });
 
-  return successResponse("Webhook received", 200);
+  return null;
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
@@ -137,10 +135,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       stripeSubscriptionId: subscription.id,
       eventType: "customer.subscription.deleted",
     });
-    return successResponse(
-      "No matching subscription; probably not created yet.",
-      200
-    );
+    return errorResponse("No matching subscription found", 404);
   }
 
   await prisma.subscription.update({
@@ -161,7 +156,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     eventType: "customer.subscription.deleted",
   });
 
-  return successResponse("Webhook received", 200);
+  return null;
 }
 
 function handleUnknownEvent(eventType: string, eventId: string) {
@@ -169,7 +164,7 @@ function handleUnknownEvent(eventType: string, eventId: string) {
     eventType: eventType,
     eventId: eventId,
   });
-  return successResponse("Ignored", 200);
+  return null;
 }
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
@@ -196,23 +191,40 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     eventId: event.id,
   });
 
-  switch (event.type) {
-    case "customer.subscription.created": {
-      const subscription = event.data.object as Stripe.Subscription;
-      return await handleSubscriptionCreated(subscription);
-    }
+  try {
+    switch (event.type) {
+      case "customer.subscription.created":
+        const subscription1 = event.data.object as Stripe.Subscription;
+        const createResult = await handleSubscriptionCreated(subscription1);
+        if (createResult) return createResult;
+        break;
 
-    case "customer.subscription.updated": {
-      const subscription = event.data.object as Stripe.Subscription;
-      return await handleSubscriptionUpdated(subscription);
-    }
+      case "customer.subscription.updated":
+        const subscription2 = event.data.object as Stripe.Subscription;
+        const updateResult = await handleSubscriptionUpdated(subscription2);
+        if (updateResult) return updateResult;
+        break;
 
-    case "customer.subscription.deleted": {
-      const subscription = event.data.object as Stripe.Subscription;
-      return await handleSubscriptionDeleted(subscription);
-    }
+      case "customer.subscription.deleted":
+        const subscription3 = event.data.object as Stripe.Subscription;
+        const deleteResult = await handleSubscriptionDeleted(subscription3);
+        if (deleteResult) return deleteResult;
+        break;
 
-    default:
-      return handleUnknownEvent(event.type, event.id);
+      default:
+        const unknownResult = handleUnknownEvent(event.type, event.id);
+        if (unknownResult) return unknownResult;
+        break;
+    }
+  } catch (err) {
+    return errorResponse(
+      err instanceof Error
+        ? err.message
+        : `Error processing ${event.type} webhook`,
+      500,
+      err
+    );
   }
+
+  return successResponse("Webhook processed successfully", 200);
 });
