@@ -99,6 +99,10 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     ? "CANCEL_SCHEDULED"
     : "ACTIVE";
 
+  const newPeriodEnd = new Date(
+    subscription.items.data[0].current_period_end * 1000
+  );
+
   await prisma.subscription.update({
     where: {
       stripeSubscriptionId: subscription.id,
@@ -107,6 +111,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       plan,
       status: newStatus,
       stripePriceId: priceId,
+      currentPeriodEnd: newPeriodEnd,
     },
   });
 
@@ -159,50 +164,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   return successResponse("Webhook received", 200);
 }
 
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
-  const subscriptionId = invoice.lines.data?.[0]?.parent
-    ?.subscription_item_details?.subscription as string | undefined;
-
-  if (!subscriptionId) {
-    logger.warn("Invoice missing subscription ID", {
-      invoiceId: invoice.id,
-      eventType: "invoice.payment_succeeded",
-    });
-    return successResponse("Missing subscription ID", 200);
-  }
-
-  const userSubscription = await prisma.subscription.findUnique({
-    where: { stripeSubscriptionId: subscriptionId },
-  });
-
-  if (!userSubscription) {
-    logger.warn("No matching subscription for invoice", {
-      subscriptionId,
-      invoiceId: invoice.id,
-      eventType: "invoice.payment_succeeded",
-    });
-    return successResponse("No matching subscription", 200);
-  }
-
-  const newPeriodEnd = new Date(invoice.lines.data?.[0]?.period?.end * 1000);
-
-  await prisma.subscription.update({
-    where: { stripeSubscriptionId: subscriptionId },
-    data: {
-      currentPeriodEnd: newPeriodEnd,
-      status: "ACTIVE", // In case it was in trial or pending
-    },
-  });
-
-  logger.info("Subscription updated from invoice payment", {
-    subscriptionId,
-    invoiceId: invoice.id,
-    newPeriodEnd,
-  });
-
-  return successResponse("Invoice payment handled", 200);
-}
-
 function handleUnknownEvent(eventType: string, eventId: string) {
   logger.warn("Unhandled Stripe webhook event type", {
     eventType: eventType,
@@ -249,11 +210,6 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
       return await handleSubscriptionDeleted(subscription);
-    }
-
-    case "invoice.payment_succeeded": {
-      const invoice = event.data.object as Stripe.Invoice & { parent?: any };
-      return await handleInvoicePaymentSucceeded(invoice);
     }
 
     default:
