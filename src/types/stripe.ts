@@ -24,3 +24,8 @@ export type StripePlan =
 export function getPlanFromPriceId(priceId: string): StripePlan | "FREE" {
   return priceIdToPlanMap[priceId as keyof typeof priceIdToPlanMap] ?? "FREE";
 }
+
+export type StripeCheckoutSessionMetadata = {
+  userId: string;
+  plan: StripePlan;
+};

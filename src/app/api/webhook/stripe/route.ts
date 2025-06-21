@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import logger from "@/lib/logger";
 import type { NextRequest } from "next/server";
 import type Stripe from "stripe";
+import { StripeCheckoutSessionMetadata } from "@/types/stripe";
+import { SubscriptionPlan } from "@prisma/client";
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -65,61 +67,62 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 async function handleInvoicePaymentSucceeded(
   invoice: Stripe.Invoice & { parent?: any }
 ) {
-  let subscriptionId: string | undefined;
-
-  // Use the new .parent.subscription_details path
-  if (invoice.parent?.type === "subscription_details") {
-    subscriptionId = invoice.parent.subscription_details?.subscription;
+  if (!invoice.parent || invoice.parent.type !== "subscription_details") {
+    logger.warn("Invoice is not a subscription", {
+      invoiceId: invoice.id,
+      eventType: "invoice.payment_succeeded",
+    });
+    return successResponse("No matching subscription", 200);
   }
+
+  const subscriptionId = invoice.parent.subscription_details?.subscription;
 
   if (!subscriptionId) {
-    logger.warn("Invoice payment succeeded but no subscription ID found", {
+    logger.warn("Subscription ID not found", {
       invoiceId: invoice.id,
+      eventType: "invoice.payment_succeeded",
     });
-    return successResponse("OK", 200);
+    return successResponse("No matching subscription", 200);
   }
 
-  const periodEndUnix = invoice.lines?.data?.[0]?.period?.end;
+  const { userId, plan } = (invoice.parent.subscription_details?.metadata ??
+    {}) as StripeCheckoutSessionMetadata;
 
-  if (!periodEndUnix) {
-    logger.warn("Invoice payment succeeded but no period end info found", {
+  if (!userId || !plan) {
+    logger.warn("Metadata missing userId or plan", {
       invoiceId: invoice.id,
-      subscriptionId,
+      eventType: "invoice.payment_succeeded",
     });
-    return successResponse("OK", 200);
+    return successResponse("Missing metadata", 200);
   }
 
   const userSubscription = await prisma.subscription.findUnique({
-    where: {
-      stripeSubscriptionId: subscriptionId,
-    },
+    where: { userId },
   });
 
   if (!userSubscription) {
-    logger.warn(
-      "Invoice payment succeeded but subscription not found in database",
-      {
-        subscriptionId,
-        invoiceId: invoice.id,
-        note: "verify-session probably not run yet",
-      }
-    );
-    return successResponse("OK", 200);
+    logger.warn("Subscription not found in database", {
+      userId,
+      eventType: "invoice.payment_succeeded",
+    });
+    return successResponse("No matching subscription", 200);
   }
 
   await prisma.subscription.update({
-    where: {
-      stripeSubscriptionId: subscriptionId,
-    },
+    where: { userId },
     data: {
-      currentPeriodEnd: new Date(periodEndUnix * 1000),
+      plan: plan as SubscriptionPlan,
+      stripeCustomerId: invoice.customer as string,
+      stripeSubscriptionId: subscriptionId,
+      stripePriceId: invoice.lines.data?.[0]?.pricing?.price_details?.price,
+      currentPeriodEnd: new Date(invoice.lines.data?.[0]?.period?.end * 1000),
     },
   });
 
-  logger.info("Subscription period updated from invoice payment", {
+  logger.info("Subscription updated from invoice payment", {
     subscriptionId,
     invoiceId: invoice.id,
-    newPeriodEnd: new Date(periodEndUnix * 1000).toISOString(),
+    newPeriodEnd: new Date(invoice.lines.data?.[0]?.period?.end * 1000),
   });
 
   return successResponse("Webhook received", 200);

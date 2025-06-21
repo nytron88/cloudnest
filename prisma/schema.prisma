@@ -126,7 +126,7 @@ model Subscription {
 
 enum SubscriptionPlan {
   FREE
-  PRO
+  PRO_MONTHLY
   PRO_YEARLY
 }
 

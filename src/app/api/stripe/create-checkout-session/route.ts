@@ -3,8 +3,16 @@ import { successResponse, errorResponse } from "@/lib/responseWrapper";
 import stripe from "@/lib/stripe";
 import type { NextRequest } from "next/server";
 import type { StripeCreateCheckoutSessionResponse } from "@/types/stripe";
+import { auth } from "@clerk/nextjs/server";
+import { getPlanFromPriceId } from "@/types/stripe";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return errorResponse("User ID is required", 400);
+  }
+
   const { priceId } = await request.json();
 
   if (!priceId) {
@@ -23,6 +31,13 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     payment_method_types: ["card"],
+    client_reference_id: userId,
+    subscription_data: {
+      metadata: {
+        userId,
+        plan: getPlanFromPriceId(priceId),
+      },
+    },
     line_items: [
       {
         price: priceId,
