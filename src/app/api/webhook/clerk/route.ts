@@ -80,6 +80,14 @@ async function handleUserUpdated(
 
   const { email_address } = emailAddress;
 
+  const user = await prisma.user.findUnique({
+    where: { id: data.id },
+  });
+
+  if (!user) {
+    return errorResponse("User not found", 404);
+  }
+
   await prisma.user.update({
     where: { id: data.id },
     data: {
@@ -104,7 +112,7 @@ async function handleUserDeleted(
   });
 
   // Delete user's subscription first (due to foreign key constraint)
-  await prisma.subscription.deleteMany({
+  await prisma.subscription.delete({
     where: { userId: data.id },
   });
 
