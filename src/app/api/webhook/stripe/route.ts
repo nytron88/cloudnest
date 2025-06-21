@@ -5,10 +5,73 @@ import prisma from "@/lib/prisma";
 import logger from "@/lib/logger";
 import type { NextRequest } from "next/server";
 import type Stripe from "stripe";
-import { StripeCheckoutSessionMetadata } from "@/types/stripe";
-import { SubscriptionPlan } from "@prisma/client";
+import {
+  StripeCheckoutSessionMetadata,
+  getPlanFromPriceId,
+} from "@/types/stripe";
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  const priceId = subscription.items.data[0].price.id;
+  const plan = getPlanFromPriceId(priceId);
+  const { userId } = subscription.metadata as StripeCheckoutSessionMetadata;
+
+  if (!userId) {
+    logger.warn("Missing userId in subscription metadata", {
+      subscriptionId: subscription.id,
+      eventType: "customer.subscription.created",
+    });
+    return successResponse("Missing userId metadata", 200);
+  }
+
+  const existing = await prisma.subscription.findUnique({
+    where: { userId },
+  });
+
+  if (!existing) {
+    await prisma.subscription.create({
+      data: {
+        userId,
+        plan,
+        status: "ACTIVE",
+        stripeCustomerId: subscription.customer as string,
+        stripeSubscriptionId: subscription.id,
+        stripePriceId: priceId,
+      },
+    });
+
+    logger.info("Subscription created and stored", {
+      stripeSubscriptionId: subscription.id,
+      userId,
+      plan,
+      eventType: "customer.subscription.created",
+    });
+  } else {
+    await prisma.subscription.update({
+      where: { userId },
+      data: {
+        plan,
+        status: "ACTIVE",
+        stripeCustomerId: subscription.customer as string,
+        stripeSubscriptionId: subscription.id,
+        stripePriceId: priceId,
+        currentPeriodEnd: new Date(
+          subscription.items.data[0].current_period_end * 1000
+        ),
+      },
+    });
+
+    logger.info("Existing subscription updated on create", {
+      stripeSubscriptionId: subscription.id,
+      userId,
+      plan,
+      eventType: "customer.subscription.created",
+    });
+  }
+
+  return successResponse("Subscription created handled", 200);
+}
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const userSubscription = await prisma.subscription.findUnique({
@@ -22,15 +85,35 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
       stripeSubscriptionId: subscription.id,
       eventType: "customer.subscription.updated",
     });
+
     return successResponse(
       "No matching subscription; probably not created yet.",
       200
     );
   }
 
-  // handle subscription updates (plan changes, renewals, etc.)
+  const priceId = subscription.items.data[0]?.price.id;
+  const plan = getPlanFromPriceId(priceId);
+
+  const newStatus = subscription.cancel_at_period_end
+    ? "CANCEL_SCHEDULED"
+    : "ACTIVE";
+
+  await prisma.subscription.update({
+    where: {
+      stripeSubscriptionId: subscription.id,
+    },
+    data: {
+      plan,
+      status: newStatus,
+      stripePriceId: priceId,
+    },
+  });
+
   logger.info("Subscription updated event processed", {
     stripeSubscriptionId: subscription.id,
+    status: newStatus,
+    stripePriceId: priceId,
     eventType: "customer.subscription.updated",
   });
 
@@ -55,7 +138,19 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     );
   }
 
-  // handle subscription cancellation/deletion
+  await prisma.subscription.update({
+    where: {
+      stripeSubscriptionId: subscription.id,
+    },
+    data: {
+      plan: "FREE",
+      status: "CANCELLED",
+      stripeSubscriptionId: null,
+      stripePriceId: null,
+      currentPeriodEnd: null,
+    },
+  });
+
   logger.info("Subscription deleted event processed", {
     stripeSubscriptionId: subscription.id,
     eventType: "customer.subscription.deleted",
@@ -64,68 +159,48 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   return successResponse("Webhook received", 200);
 }
 
-async function handleInvoicePaymentSucceeded(
-  invoice: Stripe.Invoice & { parent?: any }
-) {
-  if (!invoice.parent || invoice.parent.type !== "subscription_details") {
-    logger.warn("Invoice is not a subscription", {
-      invoiceId: invoice.id,
-      eventType: "invoice.payment_succeeded",
-    });
-    return successResponse("No matching subscription", 200);
-  }
-
-  const subscriptionId = invoice.parent.subscription_details?.subscription;
+async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
+  const subscriptionId = invoice.lines.data?.[0]?.parent
+    ?.subscription_item_details?.subscription as string | undefined;
 
   if (!subscriptionId) {
-    logger.warn("Subscription ID not found", {
+    logger.warn("Invoice missing subscription ID", {
       invoiceId: invoice.id,
       eventType: "invoice.payment_succeeded",
     });
-    return successResponse("No matching subscription", 200);
-  }
-
-  const { userId, plan } = (invoice.parent.subscription_details?.metadata ??
-    {}) as StripeCheckoutSessionMetadata;
-
-  if (!userId || !plan) {
-    logger.warn("Metadata missing userId or plan", {
-      invoiceId: invoice.id,
-      eventType: "invoice.payment_succeeded",
-    });
-    return successResponse("Missing metadata", 200);
+    return successResponse("Missing subscription ID", 200);
   }
 
   const userSubscription = await prisma.subscription.findUnique({
-    where: { userId },
+    where: { stripeSubscriptionId: subscriptionId },
   });
 
   if (!userSubscription) {
-    logger.warn("Subscription not found in database", {
-      userId,
+    logger.warn("No matching subscription for invoice", {
+      subscriptionId,
+      invoiceId: invoice.id,
       eventType: "invoice.payment_succeeded",
     });
     return successResponse("No matching subscription", 200);
   }
 
+  const newPeriodEnd = new Date(invoice.lines.data?.[0]?.period?.end * 1000);
+
   await prisma.subscription.update({
-    where: { userId },
+    where: { stripeSubscriptionId: subscriptionId },
     data: {
-      plan: plan as SubscriptionPlan,
-      stripeCustomerId: invoice.customer as string,
-      stripeSubscriptionId: subscriptionId,
-      stripePriceId: invoice.lines.data?.[0]?.pricing?.price_details?.price,
-      currentPeriodEnd: new Date(invoice.lines.data?.[0]?.period?.end * 1000),
+      currentPeriodEnd: newPeriodEnd,
+      status: "ACTIVE", // In case it was in trial or pending
     },
   });
 
   logger.info("Subscription updated from invoice payment", {
     subscriptionId,
     invoiceId: invoice.id,
-    newPeriodEnd: new Date(invoice.lines.data?.[0]?.period?.end * 1000),
+    newPeriodEnd,
   });
 
-  return successResponse("Webhook received", 200);
+  return successResponse("Invoice payment handled", 200);
 }
 
 function handleUnknownEvent(eventType: string, eventId: string) {
@@ -161,6 +236,11 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   });
 
   switch (event.type) {
+    case "customer.subscription.created": {
+      const subscription = event.data.object as Stripe.Subscription;
+      return await handleSubscriptionCreated(subscription);
+    }
+
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription;
       return await handleSubscriptionUpdated(subscription);

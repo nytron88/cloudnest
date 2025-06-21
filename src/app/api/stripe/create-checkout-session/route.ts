@@ -4,7 +4,6 @@ import stripe from "@/lib/stripe";
 import type { NextRequest } from "next/server";
 import type { StripeCreateCheckoutSessionResponse } from "@/types/stripe";
 import { auth } from "@clerk/nextjs/server";
-import { getPlanFromPriceId } from "@/types/stripe";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const { userId } = await auth();
@@ -35,7 +34,6 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     subscription_data: {
       metadata: {
         userId,
-        plan: getPlanFromPriceId(priceId),
       },
     },
     line_items: [

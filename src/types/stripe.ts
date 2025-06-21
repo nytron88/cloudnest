@@ -27,5 +27,4 @@ export function getPlanFromPriceId(priceId: string): StripePlan | "FREE" {
 
 export type StripeCheckoutSessionMetadata = {
   userId: string;
-  plan: StripePlan;
 };
