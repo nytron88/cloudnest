@@ -38,6 +38,26 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     return errorResponse("Unauthorized", 401);
   }
 
+  if (imagekit.folderId) {
+    const folder = await prisma.folder.findUnique({
+      where: {
+        id: imagekit.folderId,
+      },
+    });
+
+    if (!folder) {
+      return errorResponse("Folder not found", 404);
+    }
+
+    if (folder.userId !== userId) {
+      return errorResponse("Invalid folder ownership", 403);
+    }
+
+    if (folder.isTrash) {
+      return errorResponse("Cannot upload to trash folder", 400);
+    }
+  }
+
   const {
     name = "Untitled",
     path = "Untitled",
@@ -46,7 +66,7 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     url = "",
     thumbnailUrl = "",
     fileId = "",
-    folderId = "",
+    folderId = null,
   } = imagekit;
 
   if (!fileType || !Object.values(FileType).includes(fileType)) {

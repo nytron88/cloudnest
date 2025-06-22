@@ -9,7 +9,7 @@ export const ImageKitPayloadSchema = z.object({
   url: z.string().url().default(""),
   thumbnailUrl: z.string().url().default(""),
   fileId: z.string().default(""),
-  folderId: z.string().default(""),
+  folderId: z.string().nullable().default(null),
 });
 
 export const FileUploadSchema = z.object({
