@@ -3,14 +3,15 @@ import { successResponse, errorResponse } from "@/lib/responseWrapper";
 import stripe from "@/lib/stripe";
 import type { NextRequest } from "next/server";
 import type { StripeCreateCheckoutSessionResponse } from "@/types/stripe";
-import { auth } from "@clerk/nextjs/server";
+import { requireAuth } from "@/lib/requireAuth";
+import { NextResponse } from "next/server";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
-  const { userId } = await auth();
+  const auth = await requireAuth();
 
-  if (!userId) {
-    return errorResponse("User ID is required", 400);
-  }
+  if (auth instanceof NextResponse) return auth;
+
+  const { userId } = auth;
 
   const { priceId } = await request.json();
 

@@ -3,14 +3,13 @@ import { successResponse, errorResponse } from "@/lib/responseWrapper";
 import type { NextRequest } from "next/server";
 import type { StripeCheckoutSession } from "@/types/stripe";
 import stripe from "@/lib/stripe";
-import { auth } from "@clerk/nextjs/server";
+import { requireAuth } from "@/lib/requireAuth";
+import { NextResponse } from "next/server";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
-  const { userId } = await auth();
+  const auth = await requireAuth();
 
-  if (!userId) {
-    return errorResponse("Unauthorized", 401);
-  }
+  if (auth instanceof NextResponse) return auth;
 
   const { sessionId } = await request.json();
 

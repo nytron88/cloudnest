@@ -2,16 +2,16 @@ import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
 import { successResponse, errorResponse } from "@/lib/responseWrapper";
 import stripe from "@/lib/stripe";
 import { StripeCreatePortalSessionResponse } from "@/types/stripe";
-import { auth } from "@clerk/nextjs/server";
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import prisma from "@/lib/prisma";
+import { requireAuth } from "@/lib/requireAuth";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
-  const { userId } = await auth();
+  const auth = await requireAuth();
 
-  if (!userId) {
-    return errorResponse("User ID is required", 400);
-  }
+  if (auth instanceof NextResponse) return auth;
+
+  const { userId } = auth;
 
   const userSubscription = await prisma.subscription.findUnique({
     where: {
