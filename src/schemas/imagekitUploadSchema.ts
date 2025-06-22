@@ -3,7 +3,6 @@ import { FileType } from "@/types/file";
 
 export const ImageKitPayloadSchema = z.object({
   name: z.string().default("Untitled"),
-  path: z.string().default("Untitled"),
   size: z.number().nonnegative().default(0),
   fileType: z.nativeEnum(FileType),
   url: z.string().url().default(""),

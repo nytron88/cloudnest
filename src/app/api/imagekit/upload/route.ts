@@ -30,19 +30,30 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   const { imagekit, userId: bodyUserId } = parsedBody;
 
-  if (!imagekit || typeof imagekit !== "object") {
-    return errorResponse("Missing or invalid 'imagekit' field", 400);
-  }
-
-  if (!bodyUserId || bodyUserId !== userId) {
+  if (bodyUserId !== userId) {
     return errorResponse("Unauthorized", 401);
   }
 
-  if (imagekit.folderId) {
+  const {
+    name = "Untitled",
+    size = 0,
+    fileType,
+    url = "",
+    thumbnailUrl = "",
+    fileId = "",
+    folderId = null,
+  } = imagekit;
+
+  if (!fileType || !Object.values(FileType).includes(fileType)) {
+    return errorResponse("Invalid or missing file type", 400);
+  }
+
+  let path: string;
+
+  if (folderId) {
     const folder = await prisma.folder.findUnique({
-      where: {
-        id: imagekit.folderId,
-      },
+      where: { id: folderId },
+      select: { userId: true, isTrash: true, path: true },
     });
 
     if (!folder) {
@@ -56,21 +67,10 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     if (folder.isTrash) {
       return errorResponse("Cannot upload to trash folder", 400);
     }
-  }
 
-  const {
-    name = "Untitled",
-    path = "Untitled",
-    size = 0,
-    fileType,
-    url = "",
-    thumbnailUrl = "",
-    fileId = "",
-    folderId = null,
-  } = imagekit;
-
-  if (!fileType || !Object.values(FileType).includes(fileType)) {
-    return errorResponse("Invalid or missing file type", 400);
+    path = `${folder.path}/${name}`;
+  } else {
+    path = `/${name}`;
   }
 
   try {
@@ -92,10 +92,6 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
     return successResponse<File>("File saved successfully", 200, file);
   } catch (error: any) {
-    return errorResponse(
-      "Internal error: failed to save file",
-      500,
-      error?.message
-    );
+    return errorResponse("Failed to save file", 500, error.message);
   }
 });
