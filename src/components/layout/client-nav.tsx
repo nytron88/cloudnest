@@ -41,30 +41,32 @@ export function ClientNav() {
             <div className="flex items-center space-x-3">
                 <Link href="/dashboard" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
                     <Image src="/favicon.ico" alt="CloudNest" width={54} height={54} className="object-contain" />
-                    <h1 className="text-xl font-bold tracking-tight">CloudNest</h1>
+                    <h1 className="hidden sm:block text-xl font-bold tracking-tight">CloudNest</h1>
                 </Link>
             </div>
 
             {/* Navigation */}
-            <div className="flex items-center space-x-6">
-                <nav className="hidden sm:flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-6">
+                <nav className="flex items-center space-x-1 sm:space-x-4">
                     <Button
                         variant="outline"
-                        className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent hover:rounded-md transition-all duration-200"
+                        size="sm"
+                        className="px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent hover:rounded-md transition-all duration-200"
                         onClick={() => router.push("/pricing")}
                     >
                         Pricing
                     </Button>
                     <Button
                         variant="outline"
-                        className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent hover:rounded-md transition-all duration-200"
+                        size="sm"
+                        className="px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent hover:rounded-md transition-all duration-200"
                         onClick={handleManageSubscription}
                     >
                         Manage Subscription
                     </Button>
                 </nav>
 
-                <div className="flex items-center space-x-3 border-l pl-6">
+                <div className="flex items-center space-x-2 sm:space-x-3 border-l pl-2 sm:pl-6">
                     <ModeToggle />
                     <UserButton appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
                 </div>

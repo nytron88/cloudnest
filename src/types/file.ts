@@ -1,3 +1,6 @@
-import { File as PrismaFile } from "@prisma/client";
+import { File as PrismaFile, FileType as PrismaFileType } from "@prisma/client";
 
-export type File = PrismaFile;
+export type File = Omit<PrismaFile, "id" | "createdAt" | "updatedAt">;
+
+export const FileType = PrismaFileType;
+export type FileType = PrismaFileType;
