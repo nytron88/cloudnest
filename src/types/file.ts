@@ -1,6 +1,34 @@
+import { FileSearchSchema } from "@/schemas/fileSearchSchema";
+import { z } from "zod";
 import { File as PrismaFile, FileType as PrismaFileType } from "@prisma/client";
 
 export type File = Omit<PrismaFile, "id" | "createdAt" | "updatedAt">;
 
 export const FileType = PrismaFileType;
 export type FileType = PrismaFileType;
+
+export type FileSearchParams = z.infer<typeof FileSearchSchema>;
+
+export function mapFileType(
+  fileType: string,
+  mimeType: string
+): FileType | null {
+  const mime = mimeType.toLowerCase();
+
+  if (fileType === "image") return "IMAGE";
+  if (fileType === "video") return "VIDEO";
+  if (fileType === "audio") return "AUDIO";
+
+  if (mime.includes("pdf")) return "PDF";
+  if (
+    mime.includes("msword") ||
+    mime.includes("officedocument") ||
+    mime.includes("presentation") ||
+    mime.includes("spreadsheet") ||
+    mime.includes("text/plain")
+  ) {
+    return "DOCUMENT";
+  }
+
+  return null;
+}

@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/requireAuth";
 import { type NextRequest, NextResponse } from "next/server";
 import { errorResponse, successResponse } from "@/lib/responseWrapper";
 import prisma from "@/lib/prisma";
-import { File, FileType } from "@/types/file";
+import { File, mapFileType } from "@/types/file";
 import { FileUploadBody } from "@/types/imagekit";
 import { FileUploadSchema } from "@/schemas/imagekitUploadSchema";
 
@@ -37,15 +37,21 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const {
     name = "Untitled",
     size = 0,
-    fileType,
+    fileType: imageKitFileType,
     url = "",
     thumbnailUrl = "",
     fileId = "",
     folderId = null,
   } = imagekit;
 
-  if (!fileType || !Object.values(FileType).includes(fileType)) {
-    return errorResponse("Invalid or missing file type", 400);
+  if (!imageKitFileType || !url) {
+    return errorResponse("Missing required file data", 400);
+  }
+
+  const mappedType = mapFileType(imageKitFileType, url);
+
+  if (!mappedType) {
+    return errorResponse("Unsupported or unknown file type", 400);
   }
 
   let path: string;
@@ -93,7 +99,7 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
         name,
         path,
         size,
-        type: fileType,
+        type: mappedType,
         isTrash: false,
         isStarred: false,
         fileUrl: url,

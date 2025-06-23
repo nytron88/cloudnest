@@ -1,0 +1,69 @@
+import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
+import { successResponse, errorResponse } from "@/lib/responseWrapper";
+import { requireAuth } from "@/lib/requireAuth";
+import { NextResponse, type NextRequest } from "next/server";
+import { FileSearchSchema } from "@/schemas/fileSearchSchema";
+import prisma from "@/lib/prisma";
+
+export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
+  const auth = await requireAuth();
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { userId } = auth;
+
+  const rawQuery = Object.fromEntries(request.nextUrl.searchParams.entries());
+
+  if (!rawQuery.userId) {
+    return errorResponse("Missing userId", 400);
+  }
+
+  const parseResult = FileSearchSchema.safeParse(rawQuery);
+
+  if (!parseResult.success) {
+    return errorResponse(
+      "Invalid search parameters",
+      400,
+      parseResult.error.flatten()
+    );
+  }
+
+  const {
+    folderId,
+    userId: queryUserId,
+    search,
+    page,
+    pageSize,
+    sortBy,
+    order,
+    isTrash,
+  } = parseResult.data;
+
+  if (queryUserId !== userId) {
+    return errorResponse("Unauthorized", 401);
+  }
+
+  try {
+    const files = await prisma.file.findMany({
+      where: {
+        userId,
+        folderId: folderId || null,
+        name: search ? { contains: search, mode: "insensitive" } : undefined,
+        isTrash: isTrash ?? false,
+      },
+      orderBy: {
+        [sortBy ?? "createdAt"]: order ?? "desc",
+      },
+      skip: page && pageSize ? (page - 1) * pageSize : undefined,
+      take: pageSize,
+    });
+
+    return successResponse("Files retrieved successfully", 200, files);
+  } catch (error: any) {
+    return errorResponse(
+      "There was some error fetching the files. Please try again.",
+      500,
+      error.message
+    );
+  }
+});
