@@ -125,23 +125,11 @@ export function PricingSection({ plans, currentPlanId }: PricingSectionProps) {
             <ul className="space-y-1 flex-1">
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                <span className="text-sm">1GB Storage</span>
+                <span className="text-base">5GB Storage</span>
               </li>
               <li className="flex items-center gap-2">
                 <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                <span className="text-sm">Basic File Upload</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                <span className="text-sm">Advanced Security</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                <span className="text-sm">Web Access</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                <span className="text-sm">File Sharing & Links</span>
+                <span className="text-base">50 MB max upload size</span>
               </li>
             </ul>
             <div className="mt-4">
@@ -188,19 +176,29 @@ export function PricingSection({ plans, currentPlanId }: PricingSectionProps) {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col px-6 pb-6">
                 <ul className="space-y-1 flex-1">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                    <span className="text-sm">Everything in Free</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                    <span className="text-sm">{plan.interval === 'year' ? '1TB' : '50GB'} Storage</span>
-                  </li>
+                  {plan.interval === 'month' && (
+                    <>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <span className="text-base">1TB Storage</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <span className="text-base">5 GB max upload</span>
+                      </li>
+                    </>
+                  )}
                   {plan.interval === 'year' && (
-                    <li className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-                      <span className="text-sm">Save 20% and get extra storage vs monthly</span>
-                    </li>
+                    <>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <span className="text-base">Same exact features as Pro Monthly</span>
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <span className="text-base">Save 20% vs monthly</span>
+                      </li>
+                    </>
                   )}
                 </ul>
                 <div className="mt-4">
