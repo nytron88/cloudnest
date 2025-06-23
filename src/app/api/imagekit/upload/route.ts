@@ -73,6 +73,20 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     path = `/${name}`;
   }
 
+  const existing = await prisma.file.findFirst({
+    where: {
+      userId,
+      path,
+    },
+  });
+
+  if (existing) {
+    return errorResponse(
+      "A file with this name already exists in this location",
+      409
+    );
+  }
+
   try {
     const file = await prisma.file.create({
       data: {

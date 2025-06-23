@@ -60,6 +60,17 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     path = `/${name}`;
   }
 
+  const existing = await prisma.folder.findFirst({
+    where: {
+      userId,
+      path,
+    },
+  });
+
+  if (existing) {
+    return errorResponse("A folder with this name already exists here", 409);
+  }
+
   try {
     const newFolder = await prisma.folder.create({
       data: {
