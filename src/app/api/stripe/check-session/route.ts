@@ -1,8 +1,8 @@
-import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
-import { successResponse, errorResponse } from "@/lib/responseWrapper";
+import { withLoggerAndErrorHandler } from "@/lib/api/withLoggerAndErrorHandler";
+import { successResponse, errorResponse } from "@/lib/utils/responseWrapper";
 import type { NextRequest } from "next/server";
 import type { StripeCheckoutSession } from "@/types/stripe";
-import stripe from "@/lib/stripe";
+import stripe from "@/lib/stripe/stripe";
 import { requireAuth } from "@/lib/requireAuth";
 import { NextResponse } from "next/server";
 

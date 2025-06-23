@@ -1,5 +1,5 @@
-import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
-import { successResponse } from "@/lib/responseWrapper";
+import { withLoggerAndErrorHandler } from "@/lib/api/withLoggerAndErrorHandler";
+import { successResponse } from "@/lib/utils/responseWrapper";
 
 export const GET = withLoggerAndErrorHandler(async () => {
   return successResponse("Health check successful", 200);

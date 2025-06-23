@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import logger from "./logger";
-import { errorResponse } from "./responseWrapper";
+import logger from "../utils/logger";
+import { errorResponse } from "../utils/responseWrapper";
 import { Prisma } from "@prisma/client";
 
 export type ContextWithId = { params: { id: string } };

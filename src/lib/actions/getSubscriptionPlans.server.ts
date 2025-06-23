@@ -1,6 +1,6 @@
 "use server";
 
-import stripe from "@/lib/stripe";
+import stripe from "@/lib/stripe/stripe";
 import { SubscriptionPlan } from "@/types/subscription";
 
 export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {

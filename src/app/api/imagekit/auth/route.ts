@@ -1,8 +1,8 @@
-import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
-import { successResponse, errorResponse } from "@/lib/responseWrapper";
+import { withLoggerAndErrorHandler } from "@/lib/api/withLoggerAndErrorHandler";
+import { successResponse, errorResponse } from "@/lib/utils/responseWrapper";
 import { NextResponse } from "next/server";
-import imagekit from "@/lib/imagekit";
-import { requireAuth } from "@/lib/requireAuth";
+import imagekit from "@/lib/imagekit/imagekit";
+import { requireAuth } from "@/lib/api/requireAuth";
 import { ImageKitAuthParams } from "@/types/imagekit";
 
 export const GET = withLoggerAndErrorHandler(async () => {

@@ -1,7 +1,7 @@
-import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
-import { successResponse, errorResponse } from "@/lib/responseWrapper";
-import { requireAuth } from "@/lib/requireAuth";
-import prisma from "@/lib/prisma";
+import { withLoggerAndErrorHandler } from "@/lib/api/withLoggerAndErrorHandler";
+import { successResponse, errorResponse } from "@/lib/utils/responseWrapper";
+import { requireAuth } from "@/lib/api/requireAuth";
+import prisma from "@/lib/prisma/prisma";
 import { NextResponse, type NextRequest } from "next/server";
 import { Folder } from "@/types/folder";
 import { FolderInputBodySchema } from "@/schemas/createFolderSchema";

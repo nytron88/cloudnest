@@ -1,9 +1,9 @@
-import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
-import { successResponse, errorResponse } from "@/lib/responseWrapper";
-import { requireAuth } from "@/lib/requireAuth";
+import { withLoggerAndErrorHandler } from "@/lib/api/withLoggerAndErrorHandler";
+import { successResponse, errorResponse } from "@/lib/utils/responseWrapper";
+import { requireAuth } from "@/lib/api/requireAuth";
 import { NextResponse, type NextRequest } from "next/server";
 import { FileSearchSchema } from "@/schemas/fileSearchSchema";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 
 export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const auth = await requireAuth();

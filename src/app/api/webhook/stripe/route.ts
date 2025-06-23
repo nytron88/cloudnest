@@ -1,8 +1,8 @@
-import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
-import { successResponse, errorResponse } from "@/lib/responseWrapper";
-import stripe from "@/lib/stripe";
-import prisma from "@/lib/prisma";
-import logger from "@/lib/logger";
+import { withLoggerAndErrorHandler } from "@/lib/api/withLoggerAndErrorHandler";
+import { successResponse, errorResponse } from "@/lib/utils/responseWrapper";
+import stripe from "@/lib/stripe/stripe";
+import prisma from "@/lib/prisma/prisma";
+import logger from "@/lib/utils/logger";
 import type { NextRequest } from "next/server";
 import type Stripe from "stripe";
 import {

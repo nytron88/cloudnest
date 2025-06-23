@@ -1,7 +1,7 @@
 import { getUserSubscription } from "@/lib/actions/getUserSubscription.server";
-import { successResponse, errorResponse } from "@/lib/responseWrapper";
+import { successResponse, errorResponse } from "@/lib/utils/responseWrapper";
 import { Subscription } from "@/types/subscription";
-import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
+import { withLoggerAndErrorHandler } from "@/lib/api/withLoggerAndErrorHandler";
 import { requireAuth } from "@/lib/requireAuth";
 import { NextResponse } from "next/server";
 

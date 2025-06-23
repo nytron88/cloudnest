@@ -10,7 +10,7 @@ import { StripeCreateCheckoutSessionResponse, StripeCreatePortalSessionResponse 
 import { APIResponse } from "@/types/apiResponse";
 import axios from "axios";
 import { toast } from "sonner";
-import { stripePromise } from "@/lib/stripe-client";
+import { stripePromise } from "@/lib/stripe/stripe-client";
 
 interface PricingSectionProps {
   plans: SubscriptionPlan[];

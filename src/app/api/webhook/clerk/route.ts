@@ -1,11 +1,11 @@
 import type { NextRequest } from "next/server";
 import { headers } from "next/headers";
-import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
-import { errorResponse, successResponse } from "@/lib/responseWrapper";
-import prisma from "@/lib/prisma";
+import { withLoggerAndErrorHandler } from "@/lib/api/withLoggerAndErrorHandler";
+import { errorResponse, successResponse } from "@/lib/utils/responseWrapper";
+import prisma from "@/lib/prisma/prisma";
 import { WebhookEvent } from "@clerk/nextjs/server";
 import { Webhook } from "svix";
-import logger from "@/lib/logger";
+import logger from "@/lib/utils/logger";
 
 // Handle user creation
 async function handleUserCreated(

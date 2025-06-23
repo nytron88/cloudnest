@@ -1,18 +1,18 @@
-import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
-import { requireAuth } from "@/lib/requireAuth";
+import { withLoggerAndErrorHandler } from "@/lib/api/withLoggerAndErrorHandler";
+import { requireAuth } from "@/lib/api/requireAuth";
 import { type NextRequest, NextResponse } from "next/server";
-import { errorResponse, successResponse } from "@/lib/responseWrapper";
-import prisma from "@/lib/prisma";
+import { errorResponse, successResponse } from "@/lib/utils/responseWrapper";
+import prisma from "@/lib/prisma/prisma";
 import { File, mapFileType } from "@/types/file";
 import { FileUploadBody } from "@/types/imagekit";
 import { FileUploadSchema } from "@/schemas/imagekitUploadSchema";
-import { safeDeleteFile } from "@/lib/safeDeleteFile";
+import { safeDeleteFile } from "@/lib/imagekit/safeDeleteFile";
 import {
   PRO_MAX_FILE_SIZE_BYTES,
   PRO_MAX_STORAGE_BYTES,
   FREE_MAX_FILE_SIZE_BYTES,
   FREE_MAX_STORAGE_BYTES,
-} from "@/constants/constants";
+} from "@/lib/utils/constants";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const auth = await requireAuth();

@@ -1,4 +1,4 @@
-import { ALLOWED_MIME_TYPES } from "@/constants/constants";
+import { ALLOWED_MIME_TYPES } from "@/lib/utils/constants";
 
 export function isAllowedFile(file: File): boolean {
   const mimeType = file.type.toLowerCase();

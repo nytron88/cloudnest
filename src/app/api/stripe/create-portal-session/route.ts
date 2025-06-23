@@ -1,9 +1,9 @@
-import { withLoggerAndErrorHandler } from "@/lib/withLoggerAndErrorHandler";
-import { successResponse, errorResponse } from "@/lib/responseWrapper";
-import stripe from "@/lib/stripe";
+import { withLoggerAndErrorHandler } from "@/lib/api/withLoggerAndErrorHandler";
+import { successResponse, errorResponse } from "@/lib/utils/responseWrapper";
+import stripe from "@/lib/stripe/stripe";
 import { StripeCreatePortalSessionResponse } from "@/types/stripe";
 import { NextResponse, type NextRequest } from "next/server";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/prisma/prisma";
 import { requireAuth } from "@/lib/requireAuth";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {

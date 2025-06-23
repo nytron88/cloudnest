@@ -1,5 +1,5 @@
-import ImageKit from "@/lib/imagekit";
-import logger from "@/lib/logger";
+import ImageKit from "@/lib/imagekit/imagekit";
+import logger from "@/lib/utils/logger";
 
 export async function safeDeleteFile(
   fileId: string,
