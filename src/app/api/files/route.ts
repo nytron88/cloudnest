@@ -37,6 +37,7 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
     sortBy,
     order,
     isTrash,
+    isStarred,
   } = parseResult.data;
 
   if (queryUserId !== userId) {
@@ -50,6 +51,7 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
         folderId: folderId || null,
         name: search ? { contains: search, mode: "insensitive" } : undefined,
         isTrash: isTrash ?? false,
+        isStarred: isStarred ?? false,
       },
       orderBy: {
         [sortBy ?? "createdAt"]: order ?? "desc",

@@ -9,6 +9,5 @@ export const FileSearchSchema = z.object({
   sortBy: z.enum(["name", "createdAt", "updatedAt"]).optional(),
   order: z.enum(["asc", "desc"]).optional(),
   isTrash: z.coerce.boolean().optional(),
+  isStarred: z.coerce.boolean().optional(),
 });
-
-export type FileSearchParams = z.infer<typeof FileSearchSchema>;
