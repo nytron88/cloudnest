@@ -2,6 +2,7 @@ import { FileSearchSchema } from "@/schemas/fileSearchSchema";
 import { z } from "zod";
 import { File as PrismaFile, FileType as PrismaFileType } from "@prisma/client";
 import { FileIdParamsSchema } from "@/schemas/fileIdParamsSchema";
+import { RenameFileSchema } from "@/schemas/renameFileSchema";
 
 export type File = Omit<PrismaFile, "id" | "createdAt" | "updatedAt">;
 
@@ -35,3 +36,5 @@ export function mapFileType(
 }
 
 export type FileIdParams = z.infer<typeof FileIdParamsSchema>;
+
+export type RenameFileBody = z.infer<typeof RenameFileSchema>;

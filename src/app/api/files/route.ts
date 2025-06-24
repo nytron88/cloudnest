@@ -44,6 +44,20 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
     return errorResponse("Unauthorized", 401);
   }
 
+  if (folderId && isTrash) {
+    const folder = await prisma.folder.findUnique({
+      where: { id: folderId },
+      select: { isTrash: true },
+    });
+
+    if (folder?.isTrash) {
+      return errorResponse(
+        "Cannot search in folder that is in trash. Please restore the folder first.",
+        400
+      );
+    }
+  }
+
   try {
     const files = await prisma.file.findMany({
       where: {
