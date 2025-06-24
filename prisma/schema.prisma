@@ -60,9 +60,11 @@ model File {
   isTrash   Boolean @default(false)
   isStarred Boolean @default(false)
 
-  fileUrl        String
-  thumbnailUrl   String?
-  imagekitFileId String  @unique
+  fileUrl      String
+  thumbnailUrl String?
+
+  imagekitThumbnailId String? @unique
+  imagekitFileId      String  @unique
 
   userId String
   user   User   @relation(fields: [userId], references: [id])

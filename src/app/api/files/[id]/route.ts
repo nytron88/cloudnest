@@ -31,7 +31,7 @@ export const DELETE = withLoggerAndErrorHandler(
           userId: true,
           isTrash: true,
           imagekitFileId: true,
-          thumbnailUrl: true,
+          imagekitThumbnailId: true,
         },
       });
 
@@ -43,17 +43,17 @@ export const DELETE = withLoggerAndErrorHandler(
         method: "DELETE",
         url: request.url,
       });
-      if (file.thumbnailUrl)
-        await safeDeleteFile(file.thumbnailUrl, {
-          method: "DELETE",
-          url: request.url,
-        });
+
+      await safeDeleteFile(file.imagekitThumbnailId, {
+        method: "DELETE",
+        url: request.url,
+      });
 
       await prisma.file.delete({
         where: { id: fileId },
       });
 
-      return successResponse("File deleted successfully", 204);
+      return successResponse("File deleted successfully", 200);
     } catch (error: any) {
       return errorResponse("Failed to delete file", 500, error.message);
     }
