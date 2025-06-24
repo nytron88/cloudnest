@@ -2,10 +2,16 @@ import ImageKit from "@/lib/imagekit/imagekit";
 import logger from "@/lib/utils/logger";
 
 export async function safeDeleteFile(
-  fileId: string,
+  fileId: string | null,
   context: { method: string; url: string }
 ) {
-  if (!fileId) return;
+  if (!fileId) {
+    logger.warn("File ID is null, skipping deletion", {
+      method: context.method,
+      url: context.url,
+    });
+    return;
+  }
 
   try {
     await ImageKit.deleteFile(fileId);

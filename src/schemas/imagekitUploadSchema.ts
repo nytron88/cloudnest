@@ -6,7 +6,7 @@ export const ImageKitPayloadSchema = z.object({
   size: z.number().nonnegative().default(0),
   fileType: z.nativeEnum(FileType),
   url: z.string().url().default(""),
-  thumbnailUrl: z.string().url().default(""),
+  thumbnailUrl: z.string().url().nullable().default(null),
   fileId: z.string().default(""),
   folderId: z.string().nullable().default(null),
 });

@@ -44,7 +44,7 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     size = 0,
     fileType: imageKitFileType,
     url = "",
-    thumbnailUrl = "",
+    thumbnailUrl = null,
     fileId = "",
     folderId = null,
   } = imagekit;
@@ -59,6 +59,8 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   if (!user) {
     await safeDeleteFile(fileId, { method: "POST", url: request.url });
+    await safeDeleteFile(thumbnailUrl, { method: "POST", url: request.url });
+
     return errorResponse("User not found", 404);
   }
 
@@ -75,6 +77,7 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   if (size > maxFileSize) {
     await safeDeleteFile(fileId, { method: "POST", url: request.url });
+    await safeDeleteFile(thumbnailUrl, { method: "POST", url: request.url });
 
     return errorResponse(
       `File exceeds the ${isPro ? "Pro" : "Free"} plan file size limit.`,
@@ -84,6 +87,7 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   if (user.usedStorage + size > maxStorage) {
     await safeDeleteFile(fileId, { method: "POST", url: request.url });
+    await safeDeleteFile(thumbnailUrl, { method: "POST", url: request.url });
 
     return errorResponse(
       `You don't have enough storage left to upload this file.`,
@@ -95,6 +99,7 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   if (!mappedType) {
     await safeDeleteFile(fileId, { method: "POST", url: request.url });
+    await safeDeleteFile(thumbnailUrl, { method: "POST", url: request.url });
 
     return errorResponse("Unsupported or unknown file type", 400);
   }
@@ -109,16 +114,22 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
     if (!folder) {
       await safeDeleteFile(fileId, { method: "POST", url: request.url });
+      await safeDeleteFile(thumbnailUrl, { method: "POST", url: request.url });
+
       return errorResponse("Folder not found", 404);
     }
 
     if (folder.userId !== userId) {
       await safeDeleteFile(fileId, { method: "POST", url: request.url });
+      await safeDeleteFile(thumbnailUrl, { method: "POST", url: request.url });
+
       return errorResponse("Invalid folder ownership", 403);
     }
 
     if (folder.isTrash) {
       await safeDeleteFile(fileId, { method: "POST", url: request.url });
+      await safeDeleteFile(thumbnailUrl, { method: "POST", url: request.url });
+
       return errorResponse("Cannot upload to trash folder", 400);
     }
 
@@ -133,6 +144,8 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   if (existing) {
     await safeDeleteFile(fileId, { method: "POST", url: request.url });
+    await safeDeleteFile(thumbnailUrl, { method: "POST", url: request.url });
+
     return errorResponse(
       "A file with this name already exists in this location",
       409
@@ -168,6 +181,8 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     return successResponse<File>("File saved successfully", 200, file);
   } catch (error: any) {
     await safeDeleteFile(fileId, { method: "POST", url: request.url });
+    await safeDeleteFile(thumbnailUrl, { method: "POST", url: request.url });
+
     return errorResponse("Failed to save file", 500, error.message);
   }
 });
