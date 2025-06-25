@@ -3,7 +3,7 @@ import { successResponse, errorResponse } from "@/lib/utils/responseWrapper";
 import type { NextRequest } from "next/server";
 import type { StripeCheckoutSession } from "@/types/stripe";
 import stripe from "@/lib/stripe/stripe";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/api/requireAuth";
 import { NextResponse } from "next/server";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {

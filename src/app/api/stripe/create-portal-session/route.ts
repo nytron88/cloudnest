@@ -4,7 +4,7 @@ import stripe from "@/lib/stripe/stripe";
 import { StripeCreatePortalSessionResponse } from "@/types/stripe";
 import { NextResponse, type NextRequest } from "next/server";
 import prisma from "@/lib/prisma/prisma";
-import { requireAuth } from "@/lib/requireAuth";
+import { requireAuth } from "@/lib/api/requireAuth";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const auth = await requireAuth();
