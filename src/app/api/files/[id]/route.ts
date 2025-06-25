@@ -31,7 +31,6 @@ export const DELETE = withLoggerAndErrorHandler(
           userId: true,
           isTrash: true,
           imagekitFileId: true,
-          imagekitThumbnailId: true,
         },
       });
 
@@ -40,11 +39,6 @@ export const DELETE = withLoggerAndErrorHandler(
       if (file.userId !== userId) return errorResponse("Unauthorized", 403);
 
       await safeDeleteFile(file.imagekitFileId, {
-        method: "DELETE",
-        url: request.url,
-      });
-
-      await safeDeleteFile(file.imagekitThumbnailId, {
         method: "DELETE",
         url: request.url,
       });

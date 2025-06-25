@@ -21,7 +21,6 @@ export const DELETE = withLoggerAndErrorHandler(
       select: {
         id: true,
         imagekitFileId: true,
-        imagekitThumbnailId: true,
       },
     });
 
@@ -29,10 +28,7 @@ export const DELETE = withLoggerAndErrorHandler(
       return successResponse("No trashed files found", 200);
     }
 
-    const allFileIds = trashedFiles.flatMap((file) => [
-      file.imagekitFileId,
-      file.imagekitThumbnailId,
-    ]);
+    const allFileIds = trashedFiles.flatMap((file) => file.imagekitFileId);
 
     await safeBulkDeleteFiles(allFileIds, {
       method: "DELETE",

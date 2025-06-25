@@ -61,9 +61,7 @@ model File {
   isStarred Boolean @default(false)
 
   fileUrl      String
-  thumbnailUrl String?
 
-  imagekitThumbnailId String? @unique
   imagekitFileId      String  @unique
 
   userId String

@@ -44,9 +44,7 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     size,
     fileType: imageKitFileType,
     fileUrl,
-    thumbnailUrl,
     imagekitFileId,
-    imagekitThumbnailId,
     folderId,
   } = imagekit;
 
@@ -60,10 +58,6 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   if (!user) {
     await safeDeleteFile(imagekitFileId, { method: "POST", url: request.url });
-    await safeDeleteFile(imagekitThumbnailId, {
-      method: "POST",
-      url: request.url,
-    });
 
     return errorResponse("User not found", 404);
   }
@@ -81,10 +75,6 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   if (size > maxFileSize) {
     await safeDeleteFile(imagekitFileId, { method: "POST", url: request.url });
-    await safeDeleteFile(imagekitThumbnailId, {
-      method: "POST",
-      url: request.url,
-    });
 
     return errorResponse(
       `File exceeds the ${isPro ? "Pro" : "Free"} plan file size limit.`,
@@ -94,10 +84,6 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   if (user.usedStorage + size > maxStorage) {
     await safeDeleteFile(imagekitFileId, { method: "POST", url: request.url });
-    await safeDeleteFile(imagekitThumbnailId, {
-      method: "POST",
-      url: request.url,
-    });
 
     return errorResponse(
       `You don't have enough storage left to upload this file.`,
@@ -109,10 +95,6 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   if (!mappedType) {
     await safeDeleteFile(imagekitFileId, { method: "POST", url: request.url });
-    await safeDeleteFile(imagekitThumbnailId, {
-      method: "POST",
-      url: request.url,
-    });
 
     return errorResponse("Unsupported or unknown file type", 400);
   }
@@ -130,10 +112,6 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
         method: "POST",
         url: request.url,
       });
-      await safeDeleteFile(imagekitThumbnailId, {
-        method: "POST",
-        url: request.url,
-      });
 
       return errorResponse("Folder not found", 404);
     }
@@ -143,20 +121,12 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
         method: "POST",
         url: request.url,
       });
-      await safeDeleteFile(imagekitThumbnailId, {
-        method: "POST",
-        url: request.url,
-      });
 
       return errorResponse("Invalid folder ownership", 403);
     }
 
     if (folder.isTrash) {
       await safeDeleteFile(imagekitFileId, {
-        method: "POST",
-        url: request.url,
-      });
-      await safeDeleteFile(imagekitThumbnailId, {
         method: "POST",
         url: request.url,
       });
@@ -175,10 +145,6 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   if (existing) {
     await safeDeleteFile(imagekitFileId, { method: "POST", url: request.url });
-    await safeDeleteFile(imagekitThumbnailId, {
-      method: "POST",
-      url: request.url,
-    });
 
     return errorResponse(
       "A file with this name already exists in this location",
@@ -196,9 +162,7 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
         isTrash: false,
         isStarred: false,
         fileUrl,
-        thumbnailUrl,
         imagekitFileId,
-        imagekitThumbnailId,
         folderId,
         userId,
       },
@@ -216,10 +180,6 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     return successResponse<File>("File saved successfully", 200, file);
   } catch (error: any) {
     await safeDeleteFile(imagekitFileId, { method: "POST", url: request.url });
-    await safeDeleteFile(imagekitThumbnailId, {
-      method: "POST",
-      url: request.url,
-    });
 
     return errorResponse("Failed to save file", 500, error.message);
   }
