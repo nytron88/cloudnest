@@ -22,6 +22,7 @@ export const PATCH = withLoggerAndErrorHandler(
     const { id: fileId } = parseParams.data.params;
 
     let newName: string;
+
     try {
       const json = await request.json();
       const parseBody = RenameFileSchema.safeParse(json);
@@ -40,11 +41,22 @@ export const PATCH = withLoggerAndErrorHandler(
     try {
       const file = await prisma.file.findUnique({
         where: { id: fileId },
-        select: { userId: true, isTrash: true },
+        select: {
+          userId: true,
+          isTrash: true,
+          folderId: true,
+          path: true,
+          name: true,
+        },
       });
 
       if (!file) return errorResponse("File not found", 404);
+
+      if (file.name === newName)
+        return successResponse("File already has this name", 200);
+
       if (file.userId !== userId) return errorResponse("Unauthorized", 403);
+
       if (file.isTrash) {
         return errorResponse(
           "File is in trash. Please restore the file first.",
@@ -52,9 +64,32 @@ export const PATCH = withLoggerAndErrorHandler(
         );
       }
 
+      const lastSlashIndex = file.path.lastIndexOf("/");
+
+      const newPath =
+        lastSlashIndex !== -1
+          ? file.path.slice(0, lastSlashIndex + 1) + newName
+          : newName;
+
+      const existingFile = await prisma.file.findFirst({
+        where: {
+          path: newPath,
+          userId,
+          id: { not: fileId },
+        },
+        select: { id: true },
+      });
+
+      if (existingFile) {
+        return errorResponse(
+          "A file with this name already exists in the folder",
+          400
+        );
+      }
+
       await prisma.file.update({
         where: { id: fileId },
-        data: { name: newName },
+        data: { name: newName, path: newPath },
       });
 
       return successResponse("File renamed successfully", 200);
