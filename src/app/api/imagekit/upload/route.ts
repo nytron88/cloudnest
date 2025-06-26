@@ -13,6 +13,7 @@ import {
   FREE_MAX_FILE_SIZE_BYTES,
   FREE_MAX_STORAGE_BYTES,
 } from "@/lib/utils/constants";
+import { slugify } from "@/lib/utils/slugify";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const auth = await requireAuth();
@@ -91,7 +92,7 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     );
   }
 
-  const mappedType = mapFileType(imageKitFileType, fileUrl);
+  const mappedType = mapFileType(imageKitFileType);
 
   if (!mappedType) {
     await safeDeleteFile(imagekitFileId, { method: "POST", url: request.url });
@@ -134,9 +135,9 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
       return errorResponse("Cannot upload to trash folder", 400);
     }
 
-    path = `${folder.path}/${name}`;
+    path = `${folder.path}/${slugify(name, "_")}`;
   } else {
-    path = `/${name}`;
+    path = `/${slugify(name, "_")}`;
   }
 
   const existing = await prisma.file.findFirst({

@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { ContextWithId } from "@/lib/api/withLoggerAndErrorHandler";
 import { FileIdParamsSchema } from "@/schemas/fileIdParamsSchema";
 import { RenameFileSchema } from "@/schemas/renameFileSchema";
+import { slugify } from "@/lib/utils/slugify";
 
 export const PATCH = withLoggerAndErrorHandler(
   async (request, props: ContextWithId) => {
@@ -66,10 +67,12 @@ export const PATCH = withLoggerAndErrorHandler(
 
       const lastSlashIndex = file.path.lastIndexOf("/");
 
+      const pathSafeName = slugify(newName, "_");
+
       const newPath =
         lastSlashIndex !== -1
-          ? file.path.slice(0, lastSlashIndex + 1) + newName
-          : newName;
+          ? file.path.slice(0, lastSlashIndex + 1) + pathSafeName
+          : pathSafeName;
 
       const existingFile = await prisma.file.findFirst({
         where: {

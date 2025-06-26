@@ -1,8 +1,8 @@
 import ImageKit from "imagekit";
 
-const publicKey = process.env.IMAGEKIT_PUBLIC_KEY!;
-const privateKey = process.env.IMAGEKIT_PRIVATE_KEY!;
-const urlEndpoint = process.env.IMAGEKIT_URL_ENDPOINT!;
+const publicKey = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY;
+const urlEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT;
+const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
 
 if (!publicKey || !privateKey || !urlEndpoint) {
   throw new Error("Missing ImageKit environment variables");

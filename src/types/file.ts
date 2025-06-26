@@ -12,24 +12,14 @@ export type FileType = PrismaFileType;
 
 export type FileSearchParams = z.infer<typeof FileSearchSchema>;
 
-export function mapFileType(
-  fileType: string,
-  mimeType: string
-): FileType | null {
-  const mime = mimeType.toLowerCase();
+export function mapFileType(fileType: string): FileType | null {
+  const type = fileType.toLowerCase();
 
-  if (fileType === "image") return "IMAGE";
-  if (fileType === "video") return "VIDEO";
-  if (fileType === "audio") return "AUDIO";
-
-  if (mime.includes("pdf")) return "PDF";
-  if (
-    mime.includes("msword") ||
-    mime.includes("officedocument") ||
-    mime.includes("presentation") ||
-    mime.includes("spreadsheet") ||
-    mime.includes("text/plain")
-  ) {
+  if (type === "image") return "IMAGE";
+  if (type === "video") return "VIDEO";
+  if (type === "audio") return "AUDIO";
+  if (type === "pdf") return "PDF";
+  if (["doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt"].includes(type)) {
     return "DOCUMENT";
   }
 
