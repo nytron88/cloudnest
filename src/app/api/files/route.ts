@@ -1,10 +1,12 @@
 import { withLoggerAndErrorHandler } from "@/lib/api/withLoggerAndErrorHandler";
 import { successResponse, errorResponse } from "@/lib/utils/responseWrapper";
 import { requireAuth } from "@/lib/api/requireAuth";
-import { NextResponse, type NextRequest } from "next/server";
-import { FileSearchSchema } from "@/schemas/fileSearchSchema";
 import prisma from "@/lib/prisma/prisma";
+import { NextResponse, type NextRequest } from "next/server";
 import { File } from "@/types/file";
+import { PaginatedResponse } from "@/types/pagination";
+import { FileSearchSchema } from "@/schemas/fileSearchSchema";
+import { Prisma } from "@prisma/client";
 
 export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const auth = await requireAuth();
@@ -36,38 +38,72 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
     isStarred,
   } = parseResult.data;
 
-  if (folderId && isTrash) {
+  const currentPage = page ?? 1;
+  const itemsPerPage = pageSize ?? 10;
+
+  if (folderId) {
     const folder = await prisma.folder.findUnique({
       where: { id: folderId },
       select: { isTrash: true },
     });
 
-    if (folder?.isTrash) {
+    if (!folder) {
+      return errorResponse("Folder not found", 404);
+    }
+
+    if (folder.isTrash && (isTrash === false || isTrash === undefined)) {
       return errorResponse(
-        "Cannot search in folder that is in trash. Please restore the folder first.",
+        "Cannot access content of folder that is in trash. Please restore the folder first.",
         400
       );
     }
   }
 
   try {
-    const files = await prisma.file.findMany({
-      where: {
-        userId,
-        folderId: folderId || null,
-        name: search ? { contains: search, mode: "insensitive" } : undefined,
-        isTrash: isTrash ?? false,
-        isStarred: isStarred ?? false,
-      },
-      orderBy: {
-        [sortBy ?? "createdAt"]: order ?? "desc",
-      },
-      skip: page && pageSize ? (page - 1) * pageSize : undefined,
-      take: pageSize,
-    });
+    const baseWhereClause: Prisma.FileWhereInput = {
+      userId,
+      folderId: folderId || null,
+      name: search
+        ? {
+            contains: search,
+            mode: "insensitive" as Prisma.QueryMode,
+          }
+        : undefined,
+      isTrash: typeof isTrash === "boolean" ? isTrash : undefined,
+      isStarred: typeof isStarred === "boolean" ? isStarred : undefined,
+    };
 
-    return successResponse<File[]>("Files retrieved successfully", 200, files);
+    const [files, totalCount] = await Promise.all([
+      prisma.file.findMany({
+        where: baseWhereClause,
+        orderBy: {
+          [sortBy ?? "createdAt"]: order ?? "desc",
+        },
+        skip: (currentPage - 1) * itemsPerPage,
+        take: itemsPerPage,
+      }),
+      prisma.file.count({
+        where: baseWhereClause,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / itemsPerPage);
+
+    return successResponse<PaginatedResponse<File>>(
+      "Files retrieved successfully",
+      200,
+      {
+        data: files,
+        meta: {
+          totalItems: totalCount,
+          currentPage: currentPage,
+          pageSize: itemsPerPage,
+          totalPages: totalPages,
+        },
+      }
+    );
   } catch (error: any) {
+    console.error("Failed to retrieve files:", error);
     return errorResponse(
       "There was some error fetching the files. Please try again.",
       500,

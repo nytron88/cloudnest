@@ -7,6 +7,9 @@ import { Folder } from "@/types/folder";
 import { FolderInputSchema } from "@/schemas/createFolderSchema";
 import type { FolderInputBody } from "@/types/folder";
 import { slugify } from "@/lib/utils/slugify";
+import { FolderSearchSchema } from "@/schemas/folderSearchSchema";
+import { PaginatedResponse } from "@/types/pagination";
+import { Prisma } from "@prisma/client";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const auth = await requireAuth();
@@ -84,5 +87,78 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     );
   } catch (error: any) {
     return errorResponse("Failed to create folder", 500, error.message);
+  }
+});
+
+export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
+  const { userId } = auth;
+
+  const rawQuery = Object.fromEntries(request.nextUrl.searchParams.entries());
+
+  const parseResult = FolderSearchSchema.safeParse(rawQuery);
+
+  if (!parseResult.success) {
+    return errorResponse(
+      "Invalid search params",
+      400,
+      parseResult.error.flatten()
+    );
+  }
+
+  const { search, page, pageSize, sortBy, order, isTrash, isStarred } =
+    parseResult.data;
+
+  const currentPage = page ?? 1;
+  const itemsPerPage = pageSize ?? 10;
+
+  try {
+    let searchMode: Prisma.QueryMode = "insensitive";
+
+    const baseWhereClause = {
+      userId,
+      name: search
+        ? {
+            contains: search,
+            mode: searchMode,
+          }
+        : undefined,
+      isTrash: typeof isTrash === "boolean" ? isTrash : undefined,
+      isStarred: typeof isStarred === "boolean" ? isStarred : undefined,
+    };
+
+    const [folders, totalCount] = await Promise.all([
+      prisma.folder.findMany({
+        where: baseWhereClause,
+        orderBy: {
+          [sortBy ?? "createdAt"]: order ?? "desc",
+        },
+        skip: (currentPage - 1) * itemsPerPage,
+        take: itemsPerPage,
+      }),
+      prisma.folder.count({
+        where: baseWhereClause,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(totalCount / itemsPerPage);
+
+    return successResponse<PaginatedResponse<Folder>>(
+      "Folders retrieved successfully",
+      200,
+      {
+        data: folders,
+        meta: {
+          totalItems: totalCount,
+          currentPage: currentPage,
+          pageSize: itemsPerPage,
+          totalPages: totalPages,
+        },
+      }
+    );
+  } catch (error: any) {
+    return errorResponse("Failed to retrieve folders", 500, error.message);
   }
 });
