@@ -4,19 +4,21 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import prisma from "@/lib/prisma/prisma";
 import { NextResponse, type NextRequest } from "next/server";
 import { Folder } from "@/types/folder";
-import { FolderInputBodySchema } from "@/schemas/createFolderSchema";
+import { FolderInputSchema } from "@/schemas/createFolderSchema";
 import type { FolderInputBody } from "@/types/folder";
+import { slugify } from "@/lib/utils/slugify";
 
 export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
 
   const { userId } = auth;
+
   let parsedBody: FolderInputBody;
 
   try {
     const json = await request.json();
-    const result = FolderInputBodySchema.safeParse(json);
+    const result = FolderInputSchema.safeParse(json);
 
     if (!result.success) {
       return errorResponse("Invalid request body", 400, result.error.flatten());
@@ -27,13 +29,7 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     return errorResponse("Invalid JSON body", 400);
   }
 
-  const { folder, userId: bodyUserId } = parsedBody;
-
-  if (bodyUserId !== userId) {
-    return errorResponse("Unauthorized", 401);
-  }
-
-  const { name, parentId, isTrash = false, isStarred = false } = folder;
+  const { name, parentId } = parsedBody;
 
   let path: string;
 
@@ -55,9 +51,9 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
       return errorResponse("Cannot create folder in trash folder", 400);
     }
 
-    path = `${parentFolder.path}/${name}`;
+    path = `${parentFolder.path}/${slugify(name, "_")}`;
   } else {
-    path = `/${name}`;
+    path = `/${slugify(name, "_")}`;
   }
 
   const existing = await prisma.folder.findFirst({
@@ -77,8 +73,6 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
         name,
         path,
         parentId: parentId ?? null,
-        isTrash,
-        isStarred,
         userId,
       },
     });

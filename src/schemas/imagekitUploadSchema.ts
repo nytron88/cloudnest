@@ -9,8 +9,3 @@ export const ImageKitPayloadSchema = z.object({
   imagekitFileId: z.string().default(""),
   folderId: z.string().nullable().default(null),
 });
-
-export const FileUploadSchema = z.object({
-  imagekit: ImageKitPayloadSchema,
-  userId: z.string(),
-});

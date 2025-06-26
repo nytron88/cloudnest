@@ -5,7 +5,7 @@ import { errorResponse, successResponse } from "@/lib/utils/responseWrapper";
 import prisma from "@/lib/prisma/prisma";
 import { File, mapFileType } from "@/types/file";
 import { FileUploadBody } from "@/types/imagekit";
-import { FileUploadSchema } from "@/schemas/imagekitUploadSchema";
+import { ImageKitPayloadSchema } from "@/schemas/imagekitUploadSchema";
 import { safeDeleteFile } from "@/lib/imagekit/safeDeleteFile";
 import {
   PRO_MAX_FILE_SIZE_BYTES,
@@ -25,19 +25,13 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   try {
     const json = await request.json();
-    const result = FileUploadSchema.safeParse(json);
+    const result = ImageKitPayloadSchema.safeParse(json);
     if (!result.success) {
       return errorResponse("Invalid request body", 400, result.error.flatten());
     }
     parsedBody = result.data;
   } catch {
     return errorResponse("Invalid JSON body", 400);
-  }
-
-  const { imagekit, userId: bodyUserId } = parsedBody;
-
-  if (bodyUserId !== userId) {
-    return errorResponse("Unauthorized", 401);
   }
 
   const {
@@ -47,7 +41,7 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
     fileUrl,
     imagekitFileId,
     folderId,
-  } = imagekit;
+  } = parsedBody;
 
   const user = await prisma.user.findUnique({
     where: { id: userId },

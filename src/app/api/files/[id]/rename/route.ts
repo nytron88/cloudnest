@@ -7,6 +7,7 @@ import { ContextWithId } from "@/lib/api/withLoggerAndErrorHandler";
 import { FileIdParamsSchema } from "@/schemas/fileIdParamsSchema";
 import { RenameFileSchema } from "@/schemas/renameFileSchema";
 import { slugify } from "@/lib/utils/slugify";
+import { RenameFileBody } from "@/types/file";
 
 export const PATCH = withLoggerAndErrorHandler(
   async (request, props: ContextWithId) => {
@@ -22,7 +23,7 @@ export const PATCH = withLoggerAndErrorHandler(
 
     const { id: fileId } = parseParams.data.params;
 
-    let newName: string;
+    let parsedBody: RenameFileBody;
 
     try {
       const json = await request.json();
@@ -34,10 +35,12 @@ export const PATCH = withLoggerAndErrorHandler(
           parseBody.error.flatten()
         );
       }
-      newName = parseBody.data.name;
+      parsedBody = parseBody.data;
     } catch {
       return errorResponse("Invalid JSON body", 400);
     }
+
+    const { name: newName } = parsedBody;
 
     try {
       const file = await prisma.file.findUnique({

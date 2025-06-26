@@ -1,7 +1,4 @@
-import {
-  FileUploadSchema,
-  ImageKitPayloadSchema,
-} from "@/schemas/imagekitUploadSchema";
+import { ImageKitPayloadSchema } from "@/schemas/imagekitUploadSchema";
 import { z } from "zod";
 
 export type ImageKitAuthParams = {
@@ -10,5 +7,4 @@ export type ImageKitAuthParams = {
   token: string;
 };
 
-export type ImageKitPayload = z.infer<typeof ImageKitPayloadSchema>;
-export type FileUploadBody = z.infer<typeof FileUploadSchema>;
+export type FileUploadBody = z.infer<typeof ImageKitPayloadSchema>;

@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { NextResponse, type NextRequest } from "next/server";
 import { FileSearchSchema } from "@/schemas/fileSearchSchema";
 import prisma from "@/lib/prisma/prisma";
+import { File } from "@/types/file";
 
 export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const auth = await requireAuth();
@@ -13,10 +14,6 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const { userId } = auth;
 
   const rawQuery = Object.fromEntries(request.nextUrl.searchParams.entries());
-
-  if (!rawQuery.userId) {
-    return errorResponse("Missing userId", 400);
-  }
 
   const parseResult = FileSearchSchema.safeParse(rawQuery);
 
@@ -30,7 +27,6 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
   const {
     folderId,
-    userId: queryUserId,
     search,
     page,
     pageSize,
@@ -39,10 +35,6 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
     isTrash,
     isStarred,
   } = parseResult.data;
-
-  if (queryUserId !== userId) {
-    return errorResponse("Unauthorized", 401);
-  }
 
   if (folderId && isTrash) {
     const folder = await prisma.folder.findUnique({
@@ -74,7 +66,7 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
       take: pageSize,
     });
 
-    return successResponse("Files retrieved successfully", 200, files);
+    return successResponse<File[]>("Files retrieved successfully", 200, files);
   } catch (error: any) {
     return errorResponse(
       "There was some error fetching the files. Please try again.",

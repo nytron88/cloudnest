@@ -8,6 +8,7 @@ import { NextResponse } from "next/server";
 import { FileIdParamsSchema } from "@/schemas/fileIdParamsSchema";
 import prisma from "@/lib/prisma/prisma";
 import { MoveFileSchema } from "@/schemas/moveFileSchema";
+import { MoveFileBody } from "@/types/file";
 
 export const PATCH = withLoggerAndErrorHandler(
   async (request, props: ContextWithId) => {
@@ -23,7 +24,7 @@ export const PATCH = withLoggerAndErrorHandler(
       return errorResponse("Invalid file ID", 400, parseParams.error.flatten());
     }
 
-    let folderId: string | null;
+    let parsedBody: MoveFileBody;
 
     try {
       const json = await request.json();
@@ -36,10 +37,12 @@ export const PATCH = withLoggerAndErrorHandler(
         );
       }
 
-      folderId = parseBody.data.folderId;
+      parsedBody = parseBody.data;
     } catch {
       return errorResponse("Invalid JSON body", 400);
     }
+
+    const { folderId } = parsedBody;
 
     const { id: fileId } = parseParams.data.params;
 
