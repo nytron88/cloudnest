@@ -7,5 +7,5 @@ export const ImageKitPayloadSchema = z.object({
   fileType: z.nativeEnum(FileType),
   fileUrl: z.string().url().default(""),
   imagekitFileId: z.string().default(""),
-  folderId: z.string().nullable().default(null),
+  folderId: z.string().cuid("Invalid folder ID").nullable().default(null),
 });

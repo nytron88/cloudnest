@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const FileSearchSchema = z.object({
-  folderId: z.string().cuid().optional(),
+  folderId: z.string().cuid("Invalid folder ID").nullable().optional(),
   search: z.string().optional(),
   page: z.coerce.number().min(1).optional(),
   pageSize: z.coerce.number().min(1).max(100).optional(),

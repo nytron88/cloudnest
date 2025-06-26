@@ -38,7 +38,8 @@ export const PATCH = withLoggerAndErrorHandler(
       }
 
       parsedBody = parseBody.data;
-    } catch {
+    } catch (error) {
+      console.log(error);
       return errorResponse("Invalid JSON body", 400);
     }
 
@@ -61,6 +62,8 @@ export const PATCH = withLoggerAndErrorHandler(
       if (!file) return errorResponse("File not found", 404);
       if (file.userId !== userId) return errorResponse("Unauthorized", 403);
       if (file.isTrash) return errorResponse("File is in trash", 400);
+      if (file.folderId === folderId)
+        return successResponse("File is already in the folder", 200);
 
       let newPath: string;
 
