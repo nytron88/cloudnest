@@ -116,6 +116,18 @@ async function handleUserDeleted(
     where: { userId: data.id },
   });
 
+  await prisma.file.deleteMany({
+    where: { userId: data.id },
+  });
+
+  await prisma.folder.deleteMany({
+    where: { userId: data.id },
+  });
+
+  await prisma.sharedLink.deleteMany({
+    where: { userId: data.id },
+  });
+
   // Then delete the user
   await prisma.user.delete({
     where: { id: data.id },

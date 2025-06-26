@@ -33,7 +33,7 @@ export const PATCH = withLoggerAndErrorHandler(
 
       if (file.userId !== userId) return errorResponse("Unauthorized", 403);
 
-      if (file.isTrash) return errorResponse("File already in trash", 400);
+      if (file.isTrash) return successResponse("File already in trash", 200);
 
       await prisma.file.update({
         where: { id: fileId },

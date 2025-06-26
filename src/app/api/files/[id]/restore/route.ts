@@ -11,7 +11,6 @@ import { FileIdParamsSchema } from "@/schemas/fileIdParamsSchema";
 export const PATCH = withLoggerAndErrorHandler(
   async (_, props: ContextWithId) => {
     const auth = await requireAuth();
-
     if (auth instanceof NextResponse) return auth;
 
     const { userId } = auth;
@@ -44,7 +43,7 @@ export const PATCH = withLoggerAndErrorHandler(
       }
 
       if (!file.isTrash) {
-        return errorResponse("File is not in trash", 400);
+        return successResponse("File is already in normal state", 200);
       }
 
       await prisma.file.update({
