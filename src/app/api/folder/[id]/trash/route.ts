@@ -1,0 +1,62 @@
+import {
+  withLoggerAndErrorHandler,
+  ContextWithId,
+} from "@/lib/api/withLoggerAndErrorHandler";
+import { errorResponse, successResponse } from "@/lib/utils/responseWrapper";
+import { requireAuth } from "@/lib/api/requireAuth";
+import { NextResponse } from "next/server";
+import { FolderIdParamsSchema } from "@/schemas/folderIdParamsSchema";
+import prisma from "@/lib/prisma/prisma";
+
+export const PATCH = withLoggerAndErrorHandler(
+  async (_, props: ContextWithId) => {
+    const auth = await requireAuth();
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { userId } = auth;
+
+    const parseResult = FolderIdParamsSchema.safeParse(props);
+
+    if (!parseResult.success) {
+      return errorResponse(
+        "Invalid folder ID",
+        400,
+        parseResult.error.flatten()
+      );
+    }
+
+    const { id: folderId } = parseResult.data.params;
+
+    try {
+      const folder = await prisma.folder.findUnique({
+        where: { id: folderId },
+        select: {
+          userId: true,
+          isTrash: true,
+        },
+      });
+
+      if (!folder) {
+        return errorResponse("Folder not found", 404);
+      }
+
+      if (folder.userId !== userId) {
+        return errorResponse("Unauthorized", 403);
+      }
+
+      if (folder.isTrash) {
+        return successResponse("Folder is already in trash", 200);
+      }
+
+      await prisma.folder.update({
+        where: { id: folderId },
+        data: { isTrash: true },
+      });
+
+      return successResponse("Folder trashed successfully", 200);
+    } catch (error: any) {
+      return errorResponse("Failed to trash folder", 500, error.message);
+    }
+  }
+);

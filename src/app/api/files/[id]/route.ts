@@ -31,6 +31,7 @@ export const DELETE = withLoggerAndErrorHandler(
           userId: true,
           isTrash: true,
           imagekitFileId: true,
+          size: true,
         },
       });
 
@@ -45,6 +46,11 @@ export const DELETE = withLoggerAndErrorHandler(
 
       await prisma.file.delete({
         where: { id: fileId },
+      });
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { usedStorage: { decrement: file.size } },
       });
 
       return successResponse("File deleted successfully", 200);

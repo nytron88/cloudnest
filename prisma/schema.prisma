@@ -34,7 +34,7 @@ model Folder {
   user   User   @relation(fields: [userId], references: [id])
 
   parentId String?
-  parent   Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id])
+  parent   Folder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children Folder[] @relation("FolderHierarchy")
 
   files       File[]
@@ -68,7 +68,7 @@ model File {
   user   User   @relation(fields: [userId], references: [id])
 
   folderId String?
-  folder   Folder? @relation(fields: [folderId], references: [id])
+  folder   Folder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
 
   sharedLinks SharedLink[]
 
@@ -90,8 +90,8 @@ model SharedLink {
   fileId   String?
   folderId String?
 
-  file   File?   @relation(fields: [fileId], references: [id])
-  folder Folder? @relation(fields: [folderId], references: [id])
+  file   File?   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  folder Folder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
 
   userId String
   user   User   @relation(fields: [userId], references: [id])

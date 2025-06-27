@@ -21,26 +21,47 @@ export const DELETE = withLoggerAndErrorHandler(
       select: {
         id: true,
         imagekitFileId: true,
+        size: true,
       },
     });
 
     if (trashedFiles.length === 0) {
-      return successResponse("No trashed files found", 200);
+      return successResponse("No trashed files found to empty", 200);
     }
 
-    const allFileIds = trashedFiles.flatMap((file) => file.imagekitFileId);
-
-    await safeBulkDeleteFiles(allFileIds, {
-      method: "DELETE",
-      url: request.url,
-    });
+    const imagekitFileIds = trashedFiles.map((file) => file.imagekitFileId);
+    const fileIdsToDelete = trashedFiles.map((file) => file.id);
+    const totalBytesFreed = trashedFiles.reduce(
+      (sum, file) => sum + file.size,
+      0
+    );
 
     try {
-      await prisma.file.deleteMany({
-        where: {
-          id: { in: trashedFiles.map((file) => file.id) },
-        },
+      const response = await prisma.$transaction(async (tx) => {
+        if (imagekitFileIds.length > 0) {
+          await safeBulkDeleteFiles(imagekitFileIds, {
+            method: "DELETE",
+            url: request.url,
+          });
+        }
+
+        if (fileIdsToDelete.length > 0) {
+          await tx.file.deleteMany({
+            where: {
+              id: { in: fileIdsToDelete },
+            },
+          });
+        }
+
+        await tx.user.update({
+          where: { id: userId },
+          data: { usedStorage: { decrement: totalBytesFreed } },
+        });
+
+        return successResponse("Trashed files deleted successfully", 200);
       });
+
+      return response;
     } catch (error: any) {
       return errorResponse(
         "Failed to delete trashed files",
@@ -48,7 +69,5 @@ export const DELETE = withLoggerAndErrorHandler(
         error.message
       );
     }
-
-    return successResponse("Trashed files deleted successfully", 200);
   }
 );

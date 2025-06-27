@@ -103,7 +103,6 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
       }
     );
   } catch (error: any) {
-    console.error("Failed to retrieve files:", error);
     return errorResponse(
       "There was some error fetching the files. Please try again.",
       500,

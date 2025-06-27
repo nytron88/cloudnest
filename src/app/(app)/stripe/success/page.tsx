@@ -50,7 +50,6 @@ export default function SuccessPage() {
                 setErrorMessage(data.message || 'Failed to verify session');
             }
         } catch (error) {
-            console.error('Error verifying session:', error);
             setVerificationState('error');
             setErrorMessage('An unexpected error occurred');
         }
@@ -61,7 +60,6 @@ export default function SuccessPage() {
     };
 
     const handleContactSupport = () => {
-        // You can replace this with your support URL or email
         window.open('mailto:support@yourapp.com', '_blank');
     };
 

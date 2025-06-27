@@ -39,7 +39,6 @@ export const PATCH = withLoggerAndErrorHandler(
 
       parsedBody = parseBody.data;
     } catch (error) {
-      console.log(error);
       return errorResponse("Invalid JSON body", 400);
     }
 
