@@ -1,6 +1,6 @@
 import {
-  withLoggerAndErrorHandler,
   ContextWithId,
+  withLoggerAndErrorHandler,
 } from "@/lib/api/withLoggerAndErrorHandler";
 import { errorResponse, successResponse } from "@/lib/utils/responseWrapper";
 import { requireAuth } from "@/lib/api/requireAuth";
@@ -10,6 +10,9 @@ import { CreateShareLinkSchema } from "@/schemas/createSharedLinkSchema";
 import { CreateShareLinkBody, CreateShareLinkResponse } from "@/types/share";
 import prisma from "@/lib/prisma/prisma";
 import { nanoid } from "nanoid";
+import bcrypt from "bcryptjs";
+
+const SALT_ROUNDS = 10;
 
 export const POST = withLoggerAndErrorHandler(
   async (request: NextRequest, props: ContextWithId) => {
@@ -44,39 +47,59 @@ export const POST = withLoggerAndErrorHandler(
 
     const { password, expiresAt } = parsedBody;
 
-    try {
-      const existingFile = await prisma.file.findUnique({
-        where: { id: fileId, userId },
-      });
-
-      if (!existingFile) {
-        return errorResponse("File not found", 404);
+    let hashedPassword = undefined;
+    if (password) {
+      try {
+        hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+      } catch (hashError: any) {
+        return errorResponse("Failed to process password", 500);
       }
+    }
 
-      const token = nanoid(32);
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const file = await tx.file.findUnique({
+          where: { id: fileId },
+          select: { userId: true, isTrash: true },
+        });
 
-      await prisma.sharedLink.create({
-        data: {
-          fileId,
-          userId,
-          token,
-          password,
-          expiresAt: expiresAt ? new Date(expiresAt) : undefined,
-        },
-      });
-
-      return successResponse<CreateShareLinkResponse>(
-        "Shared link created",
-        201,
-        {
-          token,
-          url: `${process.env.NEXT_PUBLIC_APP_URL}/share/${token}`,
+        if (!file) {
+          return errorResponse("File not found", 404);
         }
-      );
-    } catch (error: any) {
-      return errorResponse("Error creating shared link", 500, {
-        error: error.message,
+
+        if (file.userId !== userId) {
+          return errorResponse("Unauthorized", 403);
+        }
+
+        if (file.isTrash) {
+          return errorResponse("File is in trash and cannot be shared", 400);
+        }
+
+        const token = nanoid(32);
+
+        await tx.sharedLink.create({
+          data: {
+            fileId,
+            userId,
+            token,
+            password: hashedPassword,
+            expiresAt,
+          },
+        });
+
+        return successResponse<CreateShareLinkResponse>(
+          "Share link created successfully",
+          201,
+          {
+            token,
+            url: `${process.env.NEXT_PUBLIC_APP_URL}/share/${token}`,
+          }
+        );
       });
+
+      return result;
+    } catch (error: any) {
+      return errorResponse("Failed to create shared link", 500, error.message);
     }
   }
 );
