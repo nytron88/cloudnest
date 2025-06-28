@@ -3,160 +3,170 @@ import { successResponse, errorResponse } from "@/lib/utils/responseWrapper";
 import stripe from "@/lib/stripe/stripe";
 import prisma from "@/lib/prisma/prisma";
 import logger from "@/lib/utils/logger";
-import type { NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import {
   StripeCheckoutSessionMetadata,
   getPlanFromPriceId,
 } from "@/types/stripe";
+import { SubscriptionStatus } from "@prisma/client";
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  const priceId = subscription.items.data[0].price.id;
-  const plan = getPlanFromPriceId(priceId);
-  const { userId } = subscription.metadata as StripeCheckoutSessionMetadata;
+  return await prisma.$transaction(async (tx) => {
+    const priceId = subscription.items.data[0].price.id;
+    const plan = getPlanFromPriceId(priceId);
+    const { userId } = subscription.metadata as StripeCheckoutSessionMetadata;
 
-  if (!userId) {
-    logger.warn("Missing userId in subscription metadata", {
-      subscriptionId: subscription.id,
-      eventType: "customer.subscription.created",
+    if (!userId) {
+      logger.warn("Missing userId in subscription metadata", {
+        subscriptionId: subscription.id,
+        eventType: "customer.subscription.created",
+      });
+      throw new Error("Missing userId metadata for subscription creation");
+    }
+
+    const existing = await tx.subscription.findUnique({
+      where: { userId },
     });
 
-    return errorResponse("Missing userId metadata", 400);
-  }
+    if (!existing) {
+      await tx.subscription.create({
+        data: {
+          userId,
+          plan,
+          status: "ACTIVE",
+          stripeCustomerId: subscription.customer as string,
+          stripeSubscriptionId: subscription.id,
+          stripePriceId: priceId,
+          currentPeriodEnd: subscription.items.data[0].current_period_end
+            ? new Date(subscription.items.data[0].current_period_end * 1000)
+            : undefined,
+        },
+      });
 
-  const existing = await prisma.subscription.findUnique({
-    where: { userId },
-  });
-
-  if (!existing) {
-    await prisma.subscription.create({
-      data: {
+      logger.info("Subscription created and stored", {
+        stripeSubscriptionId: subscription.id,
         userId,
         plan,
-        status: "ACTIVE",
-        stripeCustomerId: subscription.customer as string,
-        stripeSubscriptionId: subscription.id,
-        stripePriceId: priceId,
-      },
-    });
+        eventType: "customer.subscription.created",
+      });
+    } else {
+      await tx.subscription.update({
+        where: { userId },
+        data: {
+          plan,
+          status: "ACTIVE",
+          stripeCustomerId: subscription.customer as string,
+          stripeSubscriptionId: subscription.id,
+          stripePriceId: priceId,
+          currentPeriodEnd: new Date(
+            subscription.items.data[0].current_period_end * 1000
+          ),
+        },
+      });
 
-    logger.info("Subscription created and stored", {
-      stripeSubscriptionId: subscription.id,
-      userId,
-      plan,
-      eventType: "customer.subscription.created",
-    });
-  } else {
-    await prisma.subscription.update({
-      where: { userId },
-      data: {
+      logger.info("Existing subscription updated on create (idempotency)", {
+        stripeSubscriptionId: subscription.id,
+        userId,
         plan,
-        status: "ACTIVE",
-        stripeCustomerId: subscription.customer as string,
-        stripeSubscriptionId: subscription.id,
-        stripePriceId: priceId,
-        currentPeriodEnd: new Date(
-          subscription.items.data[0].current_period_end * 1000
-        ),
-      },
-    });
+        eventType: "customer.subscription.created",
+      });
+    }
 
-    logger.info("Existing subscription updated on create", {
-      stripeSubscriptionId: subscription.id,
-      userId,
-      plan,
-      eventType: "customer.subscription.created",
-    });
-  }
-
-  return null;
+    return null;
+  });
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  const userSubscription = await prisma.subscription.findUnique({
-    where: {
-      stripeSubscriptionId: subscription.id,
-    },
-  });
+  return await prisma.$transaction(async (tx) => {
+    const userSubscription = await tx.subscription.findUnique({
+      where: {
+        stripeSubscriptionId: subscription.id,
+      },
+    });
 
-  if (!userSubscription) {
-    logger.warn("Subscription not found in database", {
+    if (!userSubscription) {
+      logger.warn("Subscription not found in database for update event", {
+        stripeSubscriptionId: subscription.id,
+        eventType: "customer.subscription.updated",
+      });
+      throw new Error("No matching subscription found for update");
+    }
+
+    const priceId = subscription.items.data[0]?.price.id;
+    const plan = getPlanFromPriceId(priceId);
+
+    const newStatus = subscription.cancel_at_period_end
+      ? "CANCEL_SCHEDULED"
+      : subscription.status === "active"
+      ? "ACTIVE"
+      : "INACTIVE";
+
+    const newPeriodEnd = subscription.items.data[0].current_period_end
+      ? new Date(subscription.items.data[0].current_period_end * 1000)
+      : userSubscription.currentPeriodEnd;
+
+    await tx.subscription.update({
+      where: {
+        stripeSubscriptionId: subscription.id,
+      },
+      data: {
+        plan,
+        status: newStatus as SubscriptionStatus,
+        stripePriceId: priceId,
+        currentPeriodEnd: newPeriodEnd,
+      },
+    });
+
+    logger.info("Subscription updated event processed", {
       stripeSubscriptionId: subscription.id,
+      status: newStatus,
+      stripePriceId: priceId,
       eventType: "customer.subscription.updated",
     });
 
-    return errorResponse("No matching subscription found", 404);
-  }
-
-  const priceId = subscription.items.data[0]?.price.id;
-  const plan = getPlanFromPriceId(priceId);
-
-  const newStatus = subscription.cancel_at_period_end
-    ? "CANCEL_SCHEDULED"
-    : "ACTIVE";
-
-  const newPeriodEnd = new Date(
-    subscription.items.data[0].current_period_end * 1000
-  );
-
-  await prisma.subscription.update({
-    where: {
-      stripeSubscriptionId: subscription.id,
-    },
-    data: {
-      plan,
-      status: newStatus,
-      stripePriceId: priceId,
-      currentPeriodEnd: newPeriodEnd,
-    },
+    return null;
   });
-
-  logger.info("Subscription updated event processed", {
-    stripeSubscriptionId: subscription.id,
-    status: newStatus,
-    stripePriceId: priceId,
-    eventType: "customer.subscription.updated",
-  });
-
-  return null;
 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const userSubscription = await prisma.subscription.findUnique({
-    where: {
-      stripeSubscriptionId: subscription.id,
-    },
-  });
+  return await prisma.$transaction(async (tx) => {
+    const userSubscription = await tx.subscription.findUnique({
+      where: {
+        stripeSubscriptionId: subscription.id,
+      },
+    });
 
-  if (!userSubscription) {
-    logger.warn("Subscription not found in database", {
+    if (!userSubscription) {
+      logger.warn("Subscription not found in database for delete event", {
+        stripeSubscriptionId: subscription.id,
+        eventType: "customer.subscription.deleted",
+      });
+      throw new Error("No matching subscription found for delete");
+    }
+
+    await tx.subscription.update({
+      where: {
+        stripeSubscriptionId: subscription.id,
+      },
+      data: {
+        plan: "FREE",
+        status: "CANCELLED",
+        stripeSubscriptionId: null,
+        stripePriceId: null,
+        currentPeriodEnd: null,
+      },
+    });
+
+    logger.info("Subscription deleted event processed", {
       stripeSubscriptionId: subscription.id,
       eventType: "customer.subscription.deleted",
     });
-    return errorResponse("No matching subscription found", 404);
-  }
 
-  await prisma.subscription.update({
-    where: {
-      stripeSubscriptionId: subscription.id,
-    },
-    data: {
-      plan: "FREE",
-      status: "CANCELLED",
-      stripeSubscriptionId: null,
-      stripePriceId: null,
-      currentPeriodEnd: null,
-    },
+    return null;
   });
-
-  logger.info("Subscription deleted event processed", {
-    stripeSubscriptionId: subscription.id,
-    eventType: "customer.subscription.deleted",
-  });
-
-  return null;
 }
 
 function handleUnknownEvent(eventType: string, eventId: string) {
@@ -192,37 +202,43 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   });
 
   try {
+    let handlerResult: any = null;
+
     switch (event.type) {
       case "customer.subscription.created":
         const subscription1 = event.data.object as Stripe.Subscription;
-        const createResult = await handleSubscriptionCreated(subscription1);
-        if (createResult) return createResult;
+        handlerResult = await handleSubscriptionCreated(subscription1);
         break;
 
       case "customer.subscription.updated":
         const subscription2 = event.data.object as Stripe.Subscription;
-        const updateResult = await handleSubscriptionUpdated(subscription2);
-        if (updateResult) return updateResult;
+        handlerResult = await handleSubscriptionUpdated(subscription2);
         break;
 
       case "customer.subscription.deleted":
         const subscription3 = event.data.object as Stripe.Subscription;
-        const deleteResult = await handleSubscriptionDeleted(subscription3);
-        if (deleteResult) return deleteResult;
+        handlerResult = await handleSubscriptionDeleted(subscription3);
         break;
 
       default:
-        const unknownResult = handleUnknownEvent(event.type, event.id);
-        if (unknownResult) return unknownResult;
+        handlerResult = handleUnknownEvent(event.type, event.id);
         break;
     }
+
+    if (handlerResult instanceof NextResponse) {
+      return handlerResult;
+    }
   } catch (err) {
+    logger.error(
+      `Error processing Stripe webhook event type ${event.type}:`,
+      err
+    );
     return errorResponse(
       err instanceof Error
         ? err.message
         : `Error processing ${event.type} webhook`,
       500,
-      err
+      err instanceof Error ? err.message : undefined
     );
   }
 
