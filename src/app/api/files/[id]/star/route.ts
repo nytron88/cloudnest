@@ -25,45 +25,50 @@ export const PATCH = withLoggerAndErrorHandler(
     const { id: fileId } = parseResult.data.params;
 
     try {
-      const file = await prisma.file.findUnique({
-        where: {
-          id: fileId,
-        },
-        select: {
-          userId: true,
-          isStarred: true,
-          isTrash: true,
-        },
+      const result = await prisma.$transaction(async (tx) => {
+        const file = await tx.file.findUnique({
+          where: {
+            id: fileId,
+          },
+          select: {
+            userId: true,
+            isStarred: true,
+            isTrash: true,
+          },
+        });
+
+        if (!file) {
+          return errorResponse("File not found", 404);
+        }
+
+        if (file.userId !== userId) {
+          return errorResponse("Unauthorized", 403);
+        }
+
+        if (file.isTrash) {
+          return errorResponse(
+            "File is in trash and cannot be starred/unstarred. Please restore it first.",
+            400
+          );
+        }
+
+        await tx.file.update({
+          where: {
+            id: fileId,
+          },
+          data: {
+            isStarred: !file.isStarred,
+          },
+        });
+
+        const message = `File ${
+          file.isStarred ? "unstarred" : "starred"
+        } successfully`;
+
+        return successResponse(message, 200);
       });
 
-      if (!file) {
-        return errorResponse("File not found", 404);
-      }
-
-      if (file.userId !== userId) {
-        return errorResponse("Unauthorized", 403);
-      }
-
-      if (!file.isStarred && file.isTrash) {
-        return errorResponse(
-          "File is in trash. Please take it out of trash first.",
-          400
-        );
-      }
-
-      await prisma.file.update({
-        where: {
-          id: fileId,
-        },
-        data: {
-          isStarred: !file.isStarred,
-        },
-      });
-
-      return successResponse(
-        `File ${file.isStarred ? "unstarred" : "starred"} successfully`,
-        200
-      );
+      return result;
     } catch (error: any) {
       return errorResponse(
         "Failed to update starred status of the file",

@@ -15,20 +15,31 @@ export async function safeDeleteFile(
 
   try {
     await ImageKit.deleteFile(fileId);
+    logger.info("ImageKit.deleteFile successful", {
+      method: context.method,
+      url: context.url,
+      fileId,
+    });
   } catch (err: unknown) {
     const error =
       err instanceof Error
         ? err
         : new Error("Unknown error during ImageKit deletion");
 
-    logger.error("ImageKit.deleteFile failed", {
-      method: context.method,
-      url: context.url,
-      fileId,
-      error: {
-        message: error.message,
-        stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
-      },
-    });
+    logger.error(
+      "ImageKit.deleteFile failed and will trigger transaction rollback",
+      {
+        method: context.method,
+        url: context.url,
+        fileId,
+        error: {
+          message: error.message,
+          stack:
+            process.env.NODE_ENV === "development" ? error.stack : undefined,
+        },
+      }
+    );
+
+    throw error;
   }
 }

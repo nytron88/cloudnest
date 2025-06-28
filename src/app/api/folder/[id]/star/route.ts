@@ -29,36 +29,41 @@ export const PATCH = withLoggerAndErrorHandler(
     const { id: folderId } = parseResult.data.params;
 
     try {
-      const folder = await prisma.folder.findUnique({
-        where: { id: folderId },
-        select: {
-          userId: true,
-          isTrash: true,
-          isStarred: true,
-        },
+      const result = await prisma.$transaction(async (tx) => {
+        const folder = await tx.folder.findUnique({
+          where: { id: folderId },
+          select: {
+            userId: true,
+            isTrash: true,
+            isStarred: true,
+          },
+        });
+
+        if (!folder) {
+          return errorResponse("Folder not found", 404);
+        }
+
+        if (folder.userId !== userId) {
+          return errorResponse("Unauthorized", 403);
+        }
+
+        if (folder.isTrash) {
+          return errorResponse("Folder is in trash", 400);
+        }
+
+        await tx.folder.update({
+          where: { id: folderId },
+          data: { isStarred: !folder.isStarred },
+        });
+
+        const message = `Folder ${
+          folder.isStarred ? "unstarred" : "starred"
+        } successfully`;
+
+        return successResponse(message, 200);
       });
 
-      if (!folder) {
-        return errorResponse("Folder not found", 404);
-      }
-
-      if (folder.userId !== userId) {
-        return errorResponse("Unauthorized", 403);
-      }
-
-      if (folder.isTrash) {
-        return errorResponse("Folder is in trash", 400);
-      }
-
-      await prisma.folder.update({
-        where: { id: folderId },
-        data: { isStarred: !folder.isStarred },
-      });
-
-      return successResponse(
-        `Folder ${folder.isStarred ? "unstarred" : "starred"} successfully`,
-        200
-      );
+      return result;
     } catch (error: any) {
       return errorResponse("Failed to star folder", 500, error.message);
     }

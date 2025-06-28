@@ -25,35 +25,39 @@ export const DELETE = withLoggerAndErrorHandler(
     const { id: fileId } = parseResult.data.params;
 
     try {
-      const file = await prisma.file.findUnique({
-        where: { id: fileId },
-        select: {
-          userId: true,
-          isTrash: true,
-          imagekitFileId: true,
-          size: true,
-        },
+      const result = await prisma.$transaction(async (tx) => {
+        const file = await tx.file.findUnique({
+          where: { id: fileId },
+          select: {
+            userId: true,
+            isTrash: true,
+            imagekitFileId: true,
+            size: true,
+          },
+        });
+
+        if (!file) return errorResponse("File not found", 404);
+
+        if (file.userId !== userId) return errorResponse("Unauthorized", 403);
+
+        await safeDeleteFile(file.imagekitFileId, {
+          method: "DELETE",
+          url: request.url,
+        });
+
+        await tx.file.delete({
+          where: { id: fileId },
+        });
+
+        await tx.user.update({
+          where: { id: userId },
+          data: { usedStorage: { decrement: file.size } },
+        });
+
+        return successResponse("File deleted successfully", 200);
       });
 
-      if (!file) return errorResponse("File not found", 404);
-
-      if (file.userId !== userId) return errorResponse("Unauthorized", 403);
-
-      await safeDeleteFile(file.imagekitFileId, {
-        method: "DELETE",
-        url: request.url,
-      });
-
-      await prisma.file.delete({
-        where: { id: fileId },
-      });
-
-      await prisma.user.update({
-        where: { id: userId },
-        data: { usedStorage: { decrement: file.size } },
-      });
-
-      return successResponse("File deleted successfully", 200);
+      return result;
     } catch (error: any) {
       return errorResponse("Failed to delete file", 500, error.message);
     }

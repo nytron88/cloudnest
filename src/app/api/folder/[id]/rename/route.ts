@@ -51,65 +51,70 @@ export const PATCH = withLoggerAndErrorHandler(
     const { name: newName } = parsedBody;
 
     try {
-      const folder = await prisma.folder.findUnique({
-        where: { id: folderId },
-        select: {
-          userId: true,
-          isTrash: true,
-          path: true,
-          name: true,
-        },
+      const result = await prisma.$transaction(async (tx) => {
+        const folder = await tx.folder.findUnique({
+          where: { id: folderId },
+          select: {
+            userId: true,
+            isTrash: true,
+            path: true,
+            name: true,
+          },
+        });
+
+        if (!folder) {
+          return errorResponse("Folder not found", 404);
+        }
+
+        if (folder.userId !== userId) {
+          return errorResponse("Unauthorized", 403);
+        }
+
+        if (folder.isTrash) {
+          return errorResponse(
+            "Folder is in trash. Please restore the folder first.",
+            400
+          );
+        }
+
+        if (folder.name === newName) {
+          return successResponse("Folder already has this name", 200);
+        }
+
+        const lastSlashIndex = folder.path.lastIndexOf("/");
+
+        const pathSafeName = slugify(newName, "_");
+
+        const newPath =
+          lastSlashIndex !== -1
+            ? folder.path.slice(0, lastSlashIndex + 1) + pathSafeName
+            : pathSafeName;
+
+        const existingFolder = await tx.folder.findFirst({
+          where: {
+            path: newPath,
+            userId,
+            id: { not: folderId },
+          },
+          select: { id: true },
+        });
+
+        if (existingFolder) {
+          return errorResponse(
+            "A folder with this name already exists in the folder",
+            400
+          );
+        }
+
+        await tx.folder.update({
+          where: { id: folderId },
+          data: { name: newName, path: newPath },
+        });
+
+        return successResponse("Folder renamed successfully", 200);
       });
 
-      if (!folder) {
-        return errorResponse("Folder not found", 404);
-      }
-
-      if (folder.userId !== userId) {
-        return errorResponse("Unauthorized", 403);
-      }
-
-      if (folder.isTrash) {
-        return errorResponse(
-          "Folder is in trash. Please restore the folder first.",
-          400
-        );
-      }
-
-      if (folder.name === newName)
-        return successResponse("Folder already has this name", 200);
-
-      const lastSlashIndex = folder.path.lastIndexOf("/");
-
-      const pathSafeName = slugify(newName, "_");
-
-      const newPath =
-        lastSlashIndex !== -1
-          ? folder.path.slice(0, lastSlashIndex + 1) + pathSafeName
-          : pathSafeName;
-
-      const existingFolder = await prisma.folder.findFirst({
-        where: {
-          path: newPath,
-          userId,
-          id: { not: folderId },
-        },
-        select: { id: true },
-      });
-
-      if (existingFolder) {
-        return errorResponse(
-          "A folder with this name already exists in the folder",
-          400
-        );
-      }
-
-      await prisma.folder.update({
-        where: { id: folderId },
-        data: { name: newName, path: newPath },
-      });
-
-      return successResponse("Folder renamed successfully", 200);
+      return result;
     } catch (error: any) {
       return errorResponse("Failed to rename folder", 500, error.message);
     }

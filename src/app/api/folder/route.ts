@@ -11,85 +11,6 @@ import { FolderSearchSchema } from "@/schemas/folderSearchSchema";
 import { PaginatedResponse } from "@/types/pagination";
 import { Prisma } from "@prisma/client";
 
-export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
-  const auth = await requireAuth();
-  if (auth instanceof NextResponse) return auth;
-
-  const { userId } = auth;
-
-  let parsedBody: FolderInputBody;
-
-  try {
-    const json = await request.json();
-    const result = FolderInputSchema.safeParse(json);
-
-    if (!result.success) {
-      return errorResponse("Invalid request body", 400, result.error.flatten());
-    }
-
-    parsedBody = result.data;
-  } catch {
-    return errorResponse("Invalid JSON body", 400);
-  }
-
-  const { name, parentId } = parsedBody;
-
-  let path: string;
-
-  if (parentId) {
-    const parentFolder = await prisma.folder.findUnique({
-      where: { id: parentId },
-      select: { userId: true, isTrash: true, path: true },
-    });
-
-    if (!parentFolder) {
-      return errorResponse("Parent folder not found", 404);
-    }
-
-    if (parentFolder.userId !== userId) {
-      return errorResponse("Invalid parent folder ownership", 403);
-    }
-
-    if (parentFolder.isTrash) {
-      return errorResponse("Cannot create folder in trash folder", 400);
-    }
-
-    path = `${parentFolder.path}/${slugify(name, "_")}`;
-  } else {
-    path = `/${slugify(name, "_")}`;
-  }
-
-  const existing = await prisma.folder.findFirst({
-    where: {
-      userId,
-      path,
-    },
-  });
-
-  if (existing) {
-    return errorResponse("A folder with this name already exists here", 409);
-  }
-
-  try {
-    const newFolder = await prisma.folder.create({
-      data: {
-        name,
-        path,
-        parentId: parentId ?? null,
-        userId,
-      },
-    });
-
-    return successResponse<Folder>(
-      "Folder created successfully",
-      201,
-      newFolder
-    );
-  } catch (error: any) {
-    return errorResponse("Failed to create folder", 500, error.message);
-  }
-});
-
 export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
@@ -160,5 +81,91 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
     );
   } catch (error: any) {
     return errorResponse("Failed to retrieve folders", 500, error.message);
+  }
+});
+
+export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
+  const auth = await requireAuth();
+  if (auth instanceof NextResponse) return auth;
+
+  const { userId } = auth;
+
+  let parsedBody: FolderInputBody;
+
+  try {
+    const json = await request.json();
+    const result = FolderInputSchema.safeParse(json);
+
+    if (!result.success) {
+      return errorResponse("Invalid request body", 400, result.error.flatten());
+    }
+
+    parsedBody = result.data;
+  } catch {
+    return errorResponse("Invalid JSON body", 400);
+  }
+
+  const { name, parentId } = parsedBody;
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      let path: string;
+
+      if (parentId) {
+        const parentFolder = await tx.folder.findUnique({
+          where: { id: parentId },
+          select: { userId: true, isTrash: true, path: true },
+        });
+
+        if (!parentFolder) {
+          return errorResponse("Parent folder not found", 404);
+        }
+
+        if (parentFolder.userId !== userId) {
+          return errorResponse("Invalid parent folder ownership", 403);
+        }
+
+        if (parentFolder.isTrash) {
+          return errorResponse("Cannot create folder in trash folder", 400);
+        }
+
+        path = `${parentFolder.path}/${slugify(name, "_")}`;
+      } else {
+        path = `/${slugify(name, "_")}`;
+      }
+
+      const existing = await tx.folder.findFirst({
+        where: {
+          userId,
+          path,
+        },
+      });
+
+      if (existing) {
+        return errorResponse(
+          "A folder with this name already exists here",
+          409
+        );
+      }
+
+      const newFolder = await tx.folder.create({
+        data: {
+          name,
+          path,
+          parentId: parentId ?? null,
+          userId,
+        },
+      });
+
+      return successResponse<Folder>(
+        "Folder created successfully",
+        201,
+        newFolder
+      );
+    });
+
+    return result;
+  } catch (error: any) {
+    return errorResponse("Failed to create folder", 500, error.message);
   }
 });

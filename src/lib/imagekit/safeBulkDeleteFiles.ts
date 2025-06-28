@@ -17,27 +17,42 @@ export async function safeBulkDeleteFiles(
     return;
   }
 
-  await Promise.all(
-    validFileIds.map(async (fileId) => {
-      try {
-        await ImageKit.deleteFile(fileId);
-      } catch (err: unknown) {
-        const error =
-          err instanceof Error
-            ? err
-            : new Error("Unknown error during ImageKit deletion");
+  try {
+    const deletionPromises = validFileIds.map(async (fileId) => {
+      await ImageKit.deleteFile(fileId);
+      logger.info(`ImageKit.deleteFile successful for ID: ${fileId}`, {
+        method: context.method,
+        url: context.url,
+        fileId,
+      });
+    });
 
-        logger.error("ImageKit.deleteFile failed in bulk delete", {
-          method: context.method,
-          url: context.url,
-          fileId,
-          error: {
-            message: error.message,
-            stack:
-              process.env.NODE_ENV === "development" ? error.stack : undefined,
-          },
-        });
+    await Promise.all(deletionPromises);
+
+    logger.info("ImageKit.bulkDeleteFiles successful for all valid IDs", {
+      method: context.method,
+      url: context.url,
+      totalDeleted: validFileIds.length,
+    });
+  } catch (err: unknown) {
+    const error =
+      err instanceof Error
+        ? err
+        : new Error("Unknown error during ImageKit bulk deletion");
+
+    logger.error(
+      "ImageKit.bulkDeleteFiles failed and will trigger transaction rollback",
+      {
+        method: context.method,
+        url: context.url,
+        fileIds: validFileIds,
+        error: {
+          message: error.message,
+          stack:
+            process.env.NODE_ENV === "development" ? error.stack : undefined,
+        },
       }
-    })
-  );
+    );
+    throw error;
+  }
 }
