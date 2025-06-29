@@ -7,12 +7,70 @@ import { requireAuth } from "@/lib/api/requireAuth";
 import { type NextRequest, NextResponse } from "next/server";
 import { FolderIdParamsSchema } from "@/schemas/folderIdParamsSchema";
 import prisma from "@/lib/prisma/prisma";
-import { CreateShareLinkBody, CreateShareLinkResponse } from "@/types/share";
+import {
+  CreateShareLinkBody,
+  CreateShareLinkResponse,
+  SharedLink,
+} from "@/types/share";
 import { CreateShareLinkSchema } from "@/schemas/createSharedLinkSchema";
 import { nanoid } from "nanoid";
 import bcrypt from "bcryptjs";
 
 const SALT_ROUNDS = 10;
+
+export const GET = withLoggerAndErrorHandler(
+  async (_, props: ContextWithId) => {
+    const auth = await requireAuth();
+    if (auth instanceof NextResponse) return auth;
+
+    const { userId } = auth;
+
+    const parseParams = FolderIdParamsSchema.safeParse(props);
+    if (!parseParams.success) {
+      return errorResponse(
+        "Invalid folder ID",
+        400,
+        parseParams.error.flatten()
+      );
+    }
+
+    const { id: folderId } = parseParams.data.params;
+
+    try {
+      const folder = await prisma.folder.findUnique({
+        where: { id: folderId },
+        select: { userId: true },
+      });
+
+      if (!folder) {
+        return errorResponse("Folder not found", 404);
+      }
+
+      if (folder.userId !== userId) {
+        return errorResponse("Unauthorized", 403);
+      }
+
+      const sharedLinks = await prisma.sharedLink.findMany({
+        where: {
+          folderId,
+          userId,
+        },
+      });
+
+      return successResponse<SharedLink[]>(
+        "Shared links fetched successfully",
+        200,
+        sharedLinks
+      );
+    } catch (error: any) {
+      return errorResponse(
+        "Failed to fetch shared links for the folder",
+        500,
+        error.message
+      );
+    }
+  }
+);
 
 export const POST = withLoggerAndErrorHandler(
   async (request: NextRequest, props: ContextWithId) => {
@@ -104,6 +162,70 @@ export const POST = withLoggerAndErrorHandler(
       return result;
     } catch (error: any) {
       return errorResponse("Failed to share folder", 500, error.message);
+    }
+  }
+);
+
+export const DELETE = withLoggerAndErrorHandler(
+  async (_, props: ContextWithId) => {
+    const auth = await requireAuth();
+    if (auth instanceof NextResponse) return auth;
+
+    const { userId } = auth;
+
+    const parseParams = FolderIdParamsSchema.safeParse(props);
+    if (!parseParams.success) {
+      return errorResponse(
+        "Invalid folder ID",
+        400,
+        parseParams.error.flatten()
+      );
+    }
+
+    const { id: folderId } = parseParams.data.params;
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const folder = await tx.folder.findUnique({
+          where: { id: folderId },
+          select: { userId: true },
+        });
+
+        if (!folder) {
+          return errorResponse("Folder not found", 404);
+        }
+
+        if (folder.userId !== userId) {
+          return errorResponse("Unauthorized", 403);
+        }
+
+        const deleteCount = await tx.sharedLink.deleteMany({
+          where: {
+            folderId,
+            userId,
+          },
+        });
+
+        if (deleteCount.count === 0) {
+          return successResponse(
+            "No shared links found for this folder to delete",
+            200
+          );
+        }
+
+        return successResponse(
+          `${deleteCount.count} shared links revoked successfully for folder`,
+          200
+        );
+      });
+
+      return result;
+    } catch (error: any) {
+      return errorResponse(
+        "Failed to revoke shared links for the folder",
+        500,
+        error.message
+      );
     }
   }
 );
