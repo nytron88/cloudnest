@@ -2,6 +2,9 @@ import { z } from "zod";
 import { CreateShareLinkSchema } from "@/schemas/createSharedLinkSchema";
 import { SharedLink as SharedLinkType } from "@prisma/client";
 import { AuthenticateShareLinkSchema } from "@/schemas/authenticateShareLinkSchema";
+import { ShareTokenParamsSchema } from "@/schemas/shareTokenSchema";
+import { ShareIdParamsSchema } from "@/schemas/shareIdParamsSchema";
+import { UpdateShareLinkSchema } from "@/schemas/updateShareLinkSchema";
 
 export type SharedLink = SharedLinkType;
 
@@ -11,6 +14,10 @@ export type CreateShareLinkResponse = {
 };
 
 export type CreateShareLinkBody = z.infer<typeof CreateShareLinkSchema>;
+
+export type ShareTokenParams = z.infer<typeof ShareTokenParamsSchema>;
+
+export type ShareIdParams = z.infer<typeof ShareIdParamsSchema>;
 
 export type AuthenticateShareLinkBody = z.infer<
   typeof AuthenticateShareLinkSchema
@@ -37,3 +44,5 @@ export interface SharedFolderMetadata {
 }
 
 export type SharedContentMetadata = SharedFileMetadata | SharedFolderMetadata;
+
+export type UpdateShareLinkBody = z.infer<typeof UpdateShareLinkSchema>;
