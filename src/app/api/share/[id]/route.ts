@@ -23,7 +23,7 @@ export const GET = withLoggerAndErrorHandler(
         parseTokenResult.error.flatten()
       );
     }
-    const { token } = parseTokenResult.data.params;
+    const { id: token } = parseTokenResult.data.params;
 
     const cookieStore = await cookies();
     const authCookieName = getShareAuthCookieName(token);

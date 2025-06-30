@@ -1,7 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "./lib/utils/responseWrapper";
-import logger from "./lib/utils/logger";
 
 const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)", "/"]);
 
@@ -38,9 +37,7 @@ export default clerkMiddleware(async (auth, req) => {
 
     return NextResponse.next();
   } catch (error) {
-    logger.error("Middleware error", {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    console.error("Middleware error", error);
 
     if (req.nextUrl.pathname.startsWith("/api")) {
       return errorResponse("Internal server error", 500);

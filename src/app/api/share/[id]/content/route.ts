@@ -26,7 +26,7 @@ export const GET = withLoggerAndErrorHandler(
         parseTokenResult.error.flatten()
       );
     }
-    const { token } = parseTokenResult.data.params;
+    const { id: token } = parseTokenResult.data.params;
 
     const rawQuery = Object.fromEntries(request.nextUrl.searchParams.entries());
     const parseQueryParams = FolderContentsQuerySchema.safeParse(rawQuery);

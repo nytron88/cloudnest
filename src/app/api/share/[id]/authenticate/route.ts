@@ -21,7 +21,7 @@ export const POST = withLoggerAndErrorHandler(
         parseParams.error.flatten()
       );
     }
-    const { token } = parseParams.data.params;
+    const { id: token } = parseParams.data.params;
 
     let parsedBody: AuthenticateShareLinkBody;
 

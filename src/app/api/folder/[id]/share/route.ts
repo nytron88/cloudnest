@@ -103,8 +103,8 @@ export const POST = withLoggerAndErrorHandler(
         );
       }
       parsedBody = parseBody.data;
-    } catch {
-      return errorResponse("Invalid JSON body", 400);
+    } catch (error: any) {
+      return errorResponse("Invalid JSON body", 400, error.message);
     }
 
     const { password, expiresAt } = parsedBody;
