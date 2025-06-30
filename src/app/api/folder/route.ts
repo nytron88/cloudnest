@@ -5,9 +5,9 @@ import prisma from "@/lib/prisma/prisma";
 import { NextResponse, type NextRequest } from "next/server";
 import { Folder } from "@/types/folder";
 import { FolderInputSchema } from "@/schemas/createFolderSchema";
-import type { FolderInputBody } from "@/types/folder";
+import type { CombinedContentItem, FolderInputBody } from "@/types/folder";
 import { slugify } from "@/lib/utils/slugify";
-import { FolderSearchSchema } from "@/schemas/folderSearchSchema";
+import { UserContentSearchSchema } from "@/schemas/userContentSearchSchema";
 import { PaginatedResponse } from "@/types/pagination";
 import { Prisma } from "@prisma/client";
 
@@ -18,69 +18,138 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
   const { userId } = auth;
 
   const rawQuery = Object.fromEntries(request.nextUrl.searchParams.entries());
-
-  const parseResult = FolderSearchSchema.safeParse(rawQuery);
+  const parseResult = UserContentSearchSchema.safeParse(rawQuery);
 
   if (!parseResult.success) {
-    return errorResponse(
-      "Invalid search params",
-      400,
-      parseResult.error.flatten()
-    );
+    return errorResponse("Invalid search parameters", 400, parseResult.error);
   }
 
-  const { search, page, pageSize, sortBy, order, isTrash, isStarred } =
-    parseResult.data;
+  const {
+    folderId,
+    search,
+    page,
+    pageSize,
+    sortBy,
+    order,
+    isTrash,
+    isStarred,
+  } = parseResult.data;
 
   const currentPage = page ?? 1;
   const itemsPerPage = pageSize ?? 10;
 
   try {
-    let searchMode: Prisma.QueryMode = "insensitive";
-
-    const baseWhereClause = {
+    const commonFilters = {
       userId,
-      name: search
-        ? {
-            contains: search,
-            mode: searchMode,
-          }
-        : undefined,
       isTrash: typeof isTrash === "boolean" ? isTrash : undefined,
       isStarred: typeof isStarred === "boolean" ? isStarred : undefined,
+      name: search
+        ? { contains: search, mode: "insensitive" as Prisma.QueryMode }
+        : undefined,
     };
 
-    const [folders, totalCount] = await Promise.all([
-      prisma.folder.findMany({
-        where: baseWhereClause,
-        orderBy: {
-          [sortBy ?? "createdAt"]: order ?? "desc",
-        },
-        skip: (currentPage - 1) * itemsPerPage,
-        take: itemsPerPage,
-      }),
-      prisma.folder.count({
-        where: baseWhereClause,
-      }),
-    ]);
+    const folderWhere: Prisma.FolderWhereInput = {
+      ...commonFilters,
+      parentId: folderId ?? null,
+    };
 
-    const totalPages = Math.ceil(totalCount / itemsPerPage);
+    const fileWhere: Prisma.FileWhereInput = {
+      ...commonFilters,
+      folderId: folderId ?? null,
+    };
 
-    return successResponse<PaginatedResponse<Folder>>(
-      "Folders retrieved successfully",
+    const [folders, files, totalFoldersCount, totalFilesCount] =
+      await Promise.all([
+        prisma.folder.findMany({
+          where: folderWhere,
+          select: {
+            id: true,
+            name: true,
+            path: true,
+            parentId: true,
+            isTrash: true,
+            isStarred: true,
+            createdAt: true,
+            updatedAt: true,
+            userId: true,
+          },
+          orderBy: { [sortBy ?? "name"]: order ?? "asc" },
+          skip: (currentPage - 1) * itemsPerPage,
+          take: itemsPerPage / 2,
+        }),
+        prisma.file.findMany({
+          where: fileWhere,
+          select: {
+            id: true,
+            name: true,
+            path: true,
+            size: true,
+            type: true,
+            fileUrl: true,
+            folderId: true,
+            isTrash: true,
+            isStarred: true,
+            createdAt: true,
+            updatedAt: true,
+            imagekitFileId: true,
+            userId: true,
+          },
+          orderBy: { [sortBy ?? "name"]: order ?? "asc" },
+          take: itemsPerPage / 2,
+          skip: (currentPage - 1) * itemsPerPage,
+        }),
+        prisma.folder.count({ where: folderWhere }),
+        prisma.file.count({ where: fileWhere }),
+      ]);
+
+    const combinedItems: CombinedContentItem[] = [
+      ...folders.map((f) => ({
+        ...f,
+        type: "folder" as const,
+      })),
+      ...files.map((f) => {
+        const { type: originalFileType, ...rest } = f;
+        return {
+          ...rest,
+          type: "file" as const,
+          fileType: originalFileType,
+        };
+      }),
+    ];
+
+    if (sortBy === "name") {
+      combinedItems.sort((a, b) => {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+        if (order === "asc") {
+          if (nameA < nameB) return -1;
+          if (nameA > nameB) return 1;
+        } else {
+          if (nameA < nameB) return 1;
+          if (nameA > nameB) return -1;
+        }
+        return 0;
+      });
+    }
+
+    const totalItems = totalFoldersCount + totalFilesCount;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    return successResponse<PaginatedResponse<CombinedContentItem>>(
+      "Content retrieved successfully",
       200,
       {
-        data: folders,
+        data: combinedItems,
         meta: {
-          totalItems: totalCount,
-          currentPage: currentPage,
+          totalItems,
+          currentPage,
           pageSize: itemsPerPage,
-          totalPages: totalPages,
+          totalPages,
         },
       }
     );
   } catch (error: any) {
-    return errorResponse("Failed to retrieve folders", 500, error.message);
+    return errorResponse("Failed to retrieve user content", 500, error.message);
   }
 });
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-export const FolderSearchSchema = z.object({
+export const UserContentSearchSchema = z.object({
+  folderId: z.string().cuid().optional().nullable(),
   search: z.string().optional(),
   page: z.coerce.number().min(1).optional(),
   pageSize: z.coerce.number().min(1).max(100).optional(),

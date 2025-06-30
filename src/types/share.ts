@@ -5,6 +5,7 @@ import { AuthenticateShareLinkSchema } from "@/schemas/authenticateShareLinkSche
 import { ShareTokenParamsSchema } from "@/schemas/shareTokenSchema";
 import { ShareIdParamsSchema } from "@/schemas/shareIdParamsSchema";
 import { UpdateShareLinkSchema } from "@/schemas/updateShareLinkSchema";
+import { FolderContentsQuerySchema } from "@/schemas/folderContentQuerySchema";
 
 export type SharedLink = SharedLinkType;
 
@@ -46,3 +47,29 @@ export interface SharedFolderMetadata {
 export type SharedContentMetadata = SharedFileMetadata | SharedFolderMetadata;
 
 export type UpdateShareLinkBody = z.infer<typeof UpdateShareLinkSchema>;
+
+export type FolderContentsQueryParams = z.infer<
+  typeof FolderContentsQuerySchema
+>;
+
+export type SharedFileContent = {
+  id: string;
+  name: string;
+  path: string;
+  type: "file";
+  size: number;
+  fileUrl: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type SharedFolderContent = {
+  id: string;
+  name: string;
+  path: string;
+  type: "folder";
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type SharedContentItem = SharedFileContent | SharedFolderContent;
