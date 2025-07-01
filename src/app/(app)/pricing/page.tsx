@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { getSubscriptionPlans } from "@/lib/actions/getSubscriptionPlans.server";
 import { getUserSubscription } from "@/lib/actions/getUserSubscription.server";
-import { PricingSection } from "@/components/pricing-section";
+import { PricingSection } from "@/components/pricing";
 import { FAQSection } from "@/components/faq-section";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Zap, Cloud, Users, Globe } from "lucide-react";

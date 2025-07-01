@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowRight, Cloud, Lock, Zap } from "lucide-react";
 import { ModeToggle } from "@/components/layout/theme-toggle";
 import { getSubscriptionPlans } from "@/lib/actions/getSubscriptionPlans.server";
-import { PricingSection } from "@/components/pricing-section";
+import { PricingSection } from "@/components/pricing";
 
 export const revalidate = 3600;
 

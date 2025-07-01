@@ -27,7 +27,10 @@ export const POST = withLoggerAndErrorHandler(async (request: NextRequest) => {
   }
 
   if (!userSubscription.stripeCustomerId) {
-    return errorResponse("User has no stripe customer ID", 400);
+    return errorResponse(
+      "User has no stripe customer ID. Please create a subscription first. If you already have a subscription, please contact support.",
+      400
+    );
   }
 
   const origin =
