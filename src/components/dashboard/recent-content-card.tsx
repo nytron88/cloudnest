@@ -14,9 +14,13 @@ import {
 } from "lucide-react";
 import { CombinedContentItem } from '@/types/folder';
 import { formatFileSize, formatDate } from '@/lib/utils/dashboard-helpers';
+import { UploadDialog } from "@/components/upload";
+import { File as FileResponse } from '@/types/file';
 
 interface RecentContentCardProps {
     recentContent: CombinedContentItem[];
+    userPlan?: 'FREE' | 'PRO_MONTHLY' | 'PRO_YEARLY';
+    onUploadSuccess?: (files: FileResponse[]) => void;
 }
 
 const getFileIcon = (fileType: string) => {
@@ -28,7 +32,7 @@ const getFileIcon = (fileType: string) => {
     return File;
 };
 
-export function RecentContentCard({ recentContent }: RecentContentCardProps) {
+export function RecentContentCard({ recentContent, userPlan = 'FREE', onUploadSuccess }: RecentContentCardProps) {
     return (
         <Card className="mb-8 transition-all duration-300 hover:shadow-md">
             <CardHeader>
@@ -69,10 +73,16 @@ export function RecentContentCard({ recentContent }: RecentContentCardProps) {
                         <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
                         <p className="text-muted-foreground mb-4 text-lg">No files or folders yet</p>
                         <p className="text-sm text-muted-foreground mb-6">Start organizing your files in the cloud</p>
-                        <Button size="lg" className="transition-all duration-200 hover:scale-105">
-                            <Upload className="h-4 w-4 mr-2" />
-                            Upload Your First File
-                        </Button>
+                        <UploadDialog
+                            userPlan={userPlan}
+                            onUploadSuccess={onUploadSuccess}
+                            trigger={
+                                <Button size="lg" className="transition-all duration-200 hover:scale-105">
+                                    <Upload className="h-4 w-4 mr-2" />
+                                    Upload Your First File
+                                </Button>
+                            }
+                        />
                     </div>
                 )}
             </CardContent>

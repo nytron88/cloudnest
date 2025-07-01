@@ -11,6 +11,7 @@ import {
     DialogTrigger,
 } from '@/components/ui/dialog';
 import { Upload } from 'lucide-react';
+import { toast } from 'sonner';
 import { FileUpload } from './file-upload';
 import { File as FileResponse } from '@/types/file';
 
@@ -42,6 +43,9 @@ export function UploadDialog({
     const handleUploadSuccess = (files: FileResponse[]) => {
         onUploadSuccess?.(files);
         setOpen(false);
+        toast.success('Upload completed!', {
+            description: `${files.length} file(s) uploaded successfully`
+        });
     };
 
     return (

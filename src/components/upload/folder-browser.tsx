@@ -21,6 +21,7 @@ import {
     FileType as FileTypeIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils/utils';
+import { toast } from 'sonner';
 import axios from 'axios';
 import { CombinedContentItem } from '@/types/folder';
 import { PaginatedResponse } from '@/types/pagination';
@@ -126,6 +127,9 @@ export function FolderBrowser({ selectedFolderId, onFolderSelect, className }: F
             }
         } catch (error) {
             console.error('Failed to load content:', error);
+            toast.error('Failed to load folder contents', {
+                description: 'Please try refreshing or check your connection'
+            });
             setItems([]);
         } finally {
             setLoading(false);
@@ -380,6 +384,8 @@ export function FolderBrowser({ selectedFolderId, onFolderSelect, className }: F
                             size="sm"
                             onClick={() => {
                                 onFolderSelect(currentFolderId);
+                                const folderName = getCurrentFolderName();
+                                
                                 if (currentFolderId) {
                                     // Use cached path or construct from navigation
                                     const cachedInfo = selectedFolderCache[currentFolderId];
@@ -393,6 +399,10 @@ export function FolderBrowser({ selectedFolderId, onFolderSelect, className }: F
                                             path: actualPath
                                         }
                                     }));
+                                    
+                                    toast.success(`Selected "${folderName}" as upload destination`);
+                                } else {
+                                    toast.success('Selected Root folder as upload destination');
                                 }
                             }}
                             className="bg-green-600 hover:bg-green-700 text-white h-8"
@@ -489,7 +499,7 @@ export function FolderBrowser({ selectedFolderId, onFolderSelect, className }: F
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             onFolderSelect(item.id);
-                                                            console.log('Caching folder selection:', item.id, 'name:', item.name, 'path:', item.path);
+
                                                             setSelectedFolderCache(prev => ({
                                                                 ...prev,
                                                                 [item.id]: {
@@ -497,6 +507,7 @@ export function FolderBrowser({ selectedFolderId, onFolderSelect, className }: F
                                                                     path: item.path
                                                                 }
                                                             }));
+                                                            toast.success(`Selected "${item.name}" as upload destination`);
                                                         }}
                                                         className="h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                                                     >
@@ -558,7 +569,10 @@ export function FolderBrowser({ selectedFolderId, onFolderSelect, className }: F
                                 <Button
                                     size="sm"
                                     variant="outline"
-                                    onClick={() => onFolderSelect(null)}
+                                    onClick={() => {
+                                        onFolderSelect(null);
+                                        toast.info('Cleared selection - uploads will go to Root folder');
+                                    }}
                                     className="h-8 text-xs border-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40"
                                 >
                                     Clear

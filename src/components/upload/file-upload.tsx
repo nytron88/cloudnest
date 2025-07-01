@@ -204,11 +204,18 @@ export function FileUpload({
 
         if (validFiles.length > 0) {
             setFiles(prev => [...prev, ...validFiles]);
+            toast.success(`Added ${validFiles.length} file(s) to upload queue`, {
+                description: validFiles.map(f => f.originalName).join(', ')
+            });
         }
     };
 
     const removeFile = (id: string) => {
+        const removedFile = files.find(f => f.id === id);
         setFiles(prev => prev.filter(file => file.id !== id));
+        if (removedFile) {
+            toast.info(`Removed "${removedFile.currentName}" from upload queue`);
+        }
     };
 
     const getAuthParams = async (): Promise<ImageKitAuthParams> => {
@@ -267,6 +274,11 @@ export function FileUpload({
             return;
         }
 
+        const file = files.find(f => f.id === uploadFileId);
+        const oldName = file?.currentName;
+
+        const wasNameConflict = files.find(f => f.id === uploadFileId)?.status === 'name-conflict';
+
         setFiles(prev => prev.map(f =>
             f.id === uploadFileId
                 ? {
@@ -277,8 +289,16 @@ export function FileUpload({
                 }
                 : f
         ));
+
+        if (wasNameConflict) {
+            toast.success(`Resolved name conflict - "${tempName.trim()}" is ready for upload`);
+        }
         setEditingNameId(null);
         setTempName('');
+
+        if (oldName && oldName !== tempName.trim()) {
+            toast.success(`Renamed "${oldName}" to "${tempName.trim()}"`);
+        }
     };
 
     const saveFileDetails = async (imagekitResponse: any, file: File, fileName: string): Promise<FileResponse> => {
@@ -357,7 +377,12 @@ export function FileUpload({
 
             // Auto-start renaming for name conflicts
             if (isNameConflict) {
-                setTimeout(() => startRenaming(uploadFile), 100);
+                setTimeout(() => {
+                    startRenaming(uploadFile);
+                    toast.warning(`Name conflict detected for "${uploadFile.currentName}"`, {
+                        description: 'Please choose a different name to continue upload'
+                    });
+                }, 100);
             }
 
             throw error;
@@ -367,8 +392,14 @@ export function FileUpload({
     const uploadAllFiles = async () => {
         if (files.length === 0) return;
 
-        setIsUploading(true);
         const pendingFiles = files.filter(f => f.status === 'pending');
+        if (pendingFiles.length === 0) {
+            toast.info('No files pending upload');
+            return;
+        }
+
+        setIsUploading(true);
+        toast.info(`Starting upload of ${pendingFiles.length} file(s)...`);
 
         try {
             const uploadPromises = pendingFiles.map(uploadSingleFile);
@@ -401,16 +432,22 @@ export function FileUpload({
     };
 
     const clearAll = () => {
+        const fileCount = files.length;
         setFiles([]);
+        if (fileCount > 0) {
+            toast.info(`Cleared ${fileCount} file(s) from upload queue`);
+        }
     };
 
     const retryFile = (file: UploadFile) => {
         if (file.status === 'name-conflict') {
             startRenaming(file);
+            toast.info(`Please rename "${file.currentName}" to resolve conflict`);
         } else {
             setFiles(prev => prev.map(f =>
                 f.id === file.id ? { ...f, status: 'pending', error: undefined } : f
             ));
+            toast.info(`Retrying upload for "${file.currentName}"`);
         }
     };
 
@@ -493,7 +530,7 @@ export function FileUpload({
                             }}
                         />
 
-                        <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-muted-foreground pt-3 border-t border-muted-foreground/10">
+                        <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-3 text-base text-muted-foreground pt-3 border-t border-muted-foreground/10">
                             <div className="flex items-center justify-center space-x-2">
                                 <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                                 <span>Max {maxFiles} files</span>

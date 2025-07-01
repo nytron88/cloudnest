@@ -58,6 +58,26 @@ export default function DashboardPage() {
         }
     };
 
+    const fetchRecentContent = async () => {
+        try {
+            const contentResponse = await axios.get<{ payload: PaginatedResponse<CombinedContentItem> }>('/api/recent-content?pageSize=6&sortBy=updatedAt&order=desc');
+            setData(prev => ({
+                ...prev,
+                recentContent: contentResponse.data.payload.data
+            }));
+        } catch (error) {
+            console.error('Failed to fetch recent content:', error);
+        }
+    };
+
+    const handleUploadSuccess = () => {
+        // Refresh recent content when upload is successful
+        fetchRecentContent();
+        toast.success('Files uploaded successfully!', {
+            description: 'Your recent content has been updated'
+        });
+    };
+
     useEffect(() => {
         const fetchDashboardData = async () => {
             if (!userLoaded) return;
@@ -146,7 +166,11 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Recent Content */}
-                <RecentContentCard recentContent={recentContent} />
+                <RecentContentCard 
+                    recentContent={recentContent} 
+                    userPlan={currentPlan as 'FREE' | 'PRO_MONTHLY' | 'PRO_YEARLY'}
+                    onUploadSuccess={handleUploadSuccess}
+                />
 
                 {/* Quick Actions */}
                 <DashboardQuickActions
