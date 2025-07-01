@@ -54,7 +54,7 @@ export function DashboardQuickActions({
                                 Explore and manage your files
                             </p>
                         </div>
-                        <Button variant="outline" className="w-full">
+                        <Button className="w-full">
                             Open File Manager
                         </Button>
                     </div>
@@ -75,7 +75,6 @@ export function DashboardQuickActions({
                             </p>
                         </div>
                         <Button
-                            variant="outline"
                             className="w-full"
                             onClick={onManageSubscription}
                         >

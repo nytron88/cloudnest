@@ -17,7 +17,8 @@ import {
     CloudUpload,
     FileCheck,
     Loader2,
-    FileX
+    FileX,
+    Edit3
 } from 'lucide-react';
 import { cn } from '@/lib/utils/utils';
 import { toast } from 'sonner';
@@ -35,10 +36,13 @@ import { FolderBrowser } from './folder-browser';
 interface UploadFile {
     id: string;
     file: File;
+    originalName: string;
+    currentName: string;
     progress: number;
-    status: 'pending' | 'uploading' | 'success' | 'error';
+    status: 'pending' | 'uploading' | 'success' | 'error' | 'name-conflict';
     error?: string;
     response?: FileResponse;
+    isRenaming?: boolean;
 }
 
 interface FileUploadProps {
@@ -94,6 +98,8 @@ const getStatusIcon = (status: UploadFile['status']) => {
             return <FileCheck className="w-4 h-4 text-green-500" />;
         case 'error':
             return <FileX className="w-4 h-4 text-red-500" />;
+        case 'name-conflict':
+            return <AlertCircle className="w-4 h-4 text-orange-500" />;
         default:
             return <FileType className="w-4 h-4 text-gray-500" />;
     }
@@ -112,6 +118,8 @@ export function FileUpload({
     const [files, setFiles] = useState<UploadFile[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(folderId);
+    const [editingNameId, setEditingNameId] = useState<string | null>(null);
+    const [tempName, setTempName] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dragCounter = useRef(0);
 
@@ -181,6 +189,8 @@ export function FileUpload({
             validFiles.push({
                 id: Math.random().toString(36).substring(2, 11),
                 file,
+                originalName: file.name,
+                currentName: file.name,
                 progress: 0,
                 status: 'pending'
             });
@@ -237,20 +247,58 @@ export function FileUpload({
         return response.data;
     };
 
-    const saveFileDetails = async (imagekitResponse: any, file: File): Promise<FileResponse> => {
-        const fileType = mapFileType(file.type);
+    const startRenaming = (uploadFile: UploadFile) => {
+        setEditingNameId(uploadFile.id);
+        setTempName(uploadFile.currentName);
+        setFiles(prev => prev.map(f =>
+            f.id === uploadFile.id ? { ...f, isRenaming: true } : f
+        ));
+    };
+
+    const cancelRenaming = () => {
+        setEditingNameId(null);
+        setTempName('');
+        setFiles(prev => prev.map(f => ({ ...f, isRenaming: false })));
+    };
+
+    const saveRename = (uploadFileId: string) => {
+        if (!tempName.trim()) {
+            toast.error('File name cannot be empty');
+            return;
+        }
+
+        setFiles(prev => prev.map(f =>
+            f.id === uploadFileId
+                ? {
+                    ...f,
+                    currentName: tempName.trim(),
+                    isRenaming: false,
+                    status: f.status === 'name-conflict' ? 'pending' : f.status
+                }
+                : f
+        ));
+        setEditingNameId(null);
+        setTempName('');
+    };
+
+    const saveFileDetails = async (imagekitResponse: any, file: File, fileName: string): Promise<FileResponse> => {
+        // Convert ImageKit's lowercase fileType to our uppercase enum
+        const mappedFileType = mapFileType(imagekitResponse.fileType);
+
+        if (!mappedFileType) {
+            throw new Error(`Unsupported file type: ${imagekitResponse.fileType}`);
+        }
 
         const payload = {
-            name: file.name,
+            name: fileName,
             size: file.size,
-            type: fileType,
+            fileType: mappedFileType,
             imagekitFileId: imagekitResponse.fileId,
             fileUrl: imagekitResponse.url,
-            thumbnailUrl: imagekitResponse.thumbnailUrl,
             folderId: selectedFolderId
         };
 
-        const response = await axios.post<APIResponse<FileResponse>>('/api/files', payload);
+        const response = await axios.post<APIResponse<FileResponse>>('/api/imagekit/upload', payload);
 
         if (!response.data.success || !response.data.payload) {
             throw new Error(response.data.message || 'Failed to save file details');
@@ -280,8 +328,8 @@ export function FileUpload({
                 }
             );
 
-            // Save file details to our database
-            const fileResponse = await saveFileDetails(imagekitResponse, uploadFile.file);
+            // Save file details to our database using current name
+            const fileResponse = await saveFileDetails(imagekitResponse, uploadFile.file, uploadFile.currentName);
 
             // Update status to success
             setFiles(prev => prev.map(f =>
@@ -294,13 +342,23 @@ export function FileUpload({
         } catch (error: any) {
             console.error('Upload failed:', error);
             const errorMessage = error.response?.data?.message || error.message || 'Upload failed';
+            const isNameConflict = error.response?.status === 409;
 
-            // Update status to error
+            // Update status to name-conflict or error
             setFiles(prev => prev.map(f =>
                 f.id === uploadFile.id
-                    ? { ...f, status: 'error', error: errorMessage }
+                    ? {
+                        ...f,
+                        status: isNameConflict ? 'name-conflict' : 'error',
+                        error: errorMessage
+                    }
                     : f
             ));
+
+            // Auto-start renaming for name conflicts
+            if (isNameConflict) {
+                setTimeout(() => startRenaming(uploadFile), 100);
+            }
 
             throw error;
         }
@@ -347,13 +405,18 @@ export function FileUpload({
     };
 
     const retryFile = (file: UploadFile) => {
-        setFiles(prev => prev.map(f =>
-            f.id === file.id ? { ...f, status: 'pending', error: undefined } : f
-        ));
+        if (file.status === 'name-conflict') {
+            startRenaming(file);
+        } else {
+            setFiles(prev => prev.map(f =>
+                f.id === file.id ? { ...f, status: 'pending', error: undefined } : f
+            ));
+        }
     };
 
     const successCount = files.filter(f => f.status === 'success').length;
     const errorCount = files.filter(f => f.status === 'error').length;
+    const nameConflictCount = files.filter(f => f.status === 'name-conflict').length;
     const pendingCount = files.filter(f => f.status === 'pending').length;
     const uploadingCount = files.filter(f => f.status === 'uploading').length;
 
@@ -481,6 +544,12 @@ export function FileUpload({
                                             <span>{errorCount} failed</span>
                                         </span>
                                     )}
+                                    {nameConflictCount > 0 && (
+                                        <span className="flex items-center space-x-1 text-orange-600 dark:text-orange-400">
+                                            <AlertCircle className="w-3 h-3" />
+                                            <span>{nameConflictCount} need rename</span>
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -525,6 +594,7 @@ export function FileUpload({
                                         "flex items-center space-x-4 p-4 rounded-lg border transition-all duration-200",
                                         uploadFile.status === 'success' && "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
                                         uploadFile.status === 'error' && "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800",
+                                        uploadFile.status === 'name-conflict' && "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800",
                                         uploadFile.status === 'uploading' && "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800",
                                         uploadFile.status === 'pending' && "bg-card border-border hover:bg-muted/30"
                                     )}
@@ -532,7 +602,7 @@ export function FileUpload({
                                     {/* File icon with status overlay */}
                                     <div className="relative flex-shrink-0">
                                         <div className="w-10 h-10 bg-muted/50 rounded-lg flex items-center justify-center">
-                                            {getFileIcon(uploadFile.file.name)}
+                                            {getFileIcon(uploadFile.originalName)}
                                         </div>
                                         <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-background rounded-full flex items-center justify-center border-2 border-background">
                                             {getStatusIcon(uploadFile.status)}
@@ -541,12 +611,56 @@ export function FileUpload({
 
                                     {/* File details */}
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate">
-                                            {uploadFile.file.name}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {formatFileSize(uploadFile.file.size)}
-                                        </p>
+                                        {uploadFile.isRenaming ? (
+                                            <div className="space-y-2">
+                                                <input
+                                                    type="text"
+                                                    value={tempName}
+                                                    onChange={(e) => setTempName(e.target.value)}
+                                                    className="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary"
+                                                    placeholder="Enter new file name"
+                                                    autoFocus
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            saveRename(uploadFile.id);
+                                                        } else if (e.key === 'Escape') {
+                                                            cancelRenaming();
+                                                        }
+                                                    }}
+                                                />
+                                                <div className="flex space-x-2">
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={() => saveRename(uploadFile.id)}
+                                                        className="h-6 px-2 text-xs"
+                                                    >
+                                                        Save
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={cancelRenaming}
+                                                        className="h-6 px-2 text-xs"
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <p className="text-sm font-medium truncate">
+                                                    {uploadFile.currentName}
+                                                    {uploadFile.currentName !== uploadFile.originalName && (
+                                                        <span className="ml-2 text-xs text-muted-foreground">
+                                                            (renamed from {uploadFile.originalName})
+                                                        </span>
+                                                    )}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {formatFileSize(uploadFile.file.size)}
+                                                </p>
+                                            </>
+                                        )}
 
                                         {/* Progress bar */}
                                         {uploadFile.status === 'uploading' && (
@@ -574,6 +688,16 @@ export function FileUpload({
                                             </div>
                                         )}
 
+                                        {/* Name conflict message */}
+                                        {uploadFile.status === 'name-conflict' && (
+                                            <div className="mt-2 flex items-center space-x-2">
+                                                <AlertCircle className="w-3 h-3 text-orange-500 flex-shrink-0" />
+                                                <p className="text-xs text-orange-600 dark:text-orange-400">
+                                                    A file with this name already exists. Please rename the file.
+                                                </p>
+                                            </div>
+                                        )}
+
                                         {/* Success message */}
                                         {uploadFile.status === 'success' && (
                                             <div className="mt-2 flex items-center space-x-2">
@@ -587,13 +711,26 @@ export function FileUpload({
 
                                     {/* Action buttons */}
                                     <div className="flex items-center space-x-2 flex-shrink-0">
-                                        {uploadFile.status === 'error' && (
+                                        {!uploadFile.isRenaming && uploadFile.status !== 'uploading' && uploadFile.status !== 'success' && (
+                                            <Button
+                                                onClick={() => startRenaming(uploadFile)}
+                                                size="sm"
+                                                variant="outline"
+                                                disabled={isUploading}
+                                                className="h-8 w-8 p-0"
+                                                title="Rename file"
+                                            >
+                                                <Edit3 className="w-3 h-3" />
+                                            </Button>
+                                        )}
+                                        {(uploadFile.status === 'error' || uploadFile.status === 'name-conflict') && !uploadFile.isRenaming && (
                                             <Button
                                                 onClick={() => retryFile(uploadFile)}
                                                 size="sm"
                                                 variant="outline"
                                                 disabled={isUploading}
                                                 className="h-8 w-8 p-0"
+                                                title={uploadFile.status === 'name-conflict' ? 'Rename and retry' : 'Retry upload'}
                                             >
                                                 <RotateCcw className="w-3 h-3" />
                                             </Button>
@@ -604,6 +741,7 @@ export function FileUpload({
                                             variant="ghost"
                                             disabled={uploadFile.status === 'uploading'}
                                             className="h-8 w-8 p-0 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20"
+                                            title="Remove file"
                                         >
                                             <X className="w-3 h-3" />
                                         </Button>
