@@ -1,73 +1,87 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, FileText, Crown } from "lucide-react";
-import { getUploadLimit } from '@/lib/utils/dashboard-helpers';
+import { Upload, FolderOpen, Crown } from "lucide-react";
+import { UploadDialog } from "@/components/upload";
 
 interface DashboardQuickActionsProps {
     currentPlan: string;
     onManageSubscription: () => void;
 }
 
-export function DashboardQuickActions({ currentPlan, onManageSubscription }: DashboardQuickActionsProps) {
-    const uploadLimit = getUploadLimit(currentPlan);
+export function DashboardQuickActions({
+    currentPlan,
+    onManageSubscription
+}: DashboardQuickActionsProps) {
+    const userPlan = currentPlan as 'FREE' | 'PRO_MONTHLY' | 'PRO_YEARLY';
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-105 border-2 hover:border-primary/20">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 group-hover:text-primary transition-colors">
-                        <Upload className="h-5 w-5" />
-                        Upload Files
-                    </CardTitle>
-                    <CardDescription>
-                        Upload up to {uploadLimit} per file
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button className="w-full transition-all duration-200 hover:scale-105">
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Files
-                    </Button>
+            {/* Upload Files */}
+            <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center space-y-4">
+                        <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                            <Upload className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold mb-1">Upload Files</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                Add new files to your storage
+                            </p>
+                        </div>
+                        <UploadDialog
+                            userPlan={userPlan}
+                            trigger={
+                                <Button className="w-full">
+                                    Upload Now
+                                </Button>
+                            }
+                        />
+                    </div>
                 </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-105 border-2 hover:border-primary/20">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 group-hover:text-primary transition-colors">
-                        <FileText className="h-5 w-5" />
-                        Browse Files
-                    </CardTitle>
-                    <CardDescription>
-                        Browse and organize your uploaded files
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button variant="outline" className="w-full transition-all duration-200 hover:scale-105">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Browse Files
-                    </Button>
+            {/* Browse Files */}
+            <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center space-y-4">
+                        <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-full">
+                            <FolderOpen className="h-6 w-6 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold mb-1">Browse Files</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                Explore and manage your files
+                            </p>
+                        </div>
+                        <Button variant="outline" className="w-full">
+                            Open File Manager
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
-            <Card className="group hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-105 border-2 hover:border-primary/20">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 group-hover:text-primary transition-colors">
-                        <Crown className="h-5 w-5" />
-                        Subscription
-                    </CardTitle>
-                    <CardDescription>
-                        {currentPlan === 'FREE' ? 'Upgrade to Pro for 1TB storage' : 'Manage your subscription and billing'}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button 
-                        variant="outline" 
-                        className="w-full transition-all duration-200 hover:scale-105"
-                        onClick={onManageSubscription}
-                    >
-                        <Crown className="h-4 w-4 mr-2" />
-                        {currentPlan === 'FREE' ? 'Upgrade to Pro' : 'Manage Subscription'}
-                    </Button>
+            {/* Manage Subscription */}
+            <Card className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                    <div className="flex flex-col items-center text-center space-y-4">
+                        <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-full">
+                            <Crown className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold mb-1">Subscription</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                Manage your plan and billing
+                            </p>
+                        </div>
+                        <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={onManageSubscription}
+                        >
+                            Manage Plan
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
         </div>

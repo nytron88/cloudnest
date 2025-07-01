@@ -48,7 +48,7 @@ export const GET = withLoggerAndErrorHandler(async (request: NextRequest) => {
 
     const baseWhereClause = {
       userId,
-      parentId: parentId ?? undefined,
+      parentId: parentId ?? null,
       name: search
         ? {
             contains: search,
