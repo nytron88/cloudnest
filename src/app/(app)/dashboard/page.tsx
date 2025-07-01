@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { APIResponse } from '@/types/apiResponse';
 import { StripeCreatePortalSessionResponse } from '@/types/stripe';
 
-import { 
+import {
     DashboardStats,
     StorageUsageCard,
     AccountInfoCard,
@@ -68,7 +68,7 @@ export default function DashboardPage() {
                 // Fetch user profile and recent content in parallel
                 const [userResponse, contentResponse] = await Promise.all([
                     axios.get<{ payload: UserProfileResponseData }>('/api/user/me'),
-                    axios.get<{ payload: PaginatedResponse<CombinedContentItem> }>('/api/folder?pageSize=6&sortBy=updatedAt&order=desc')
+                    axios.get<{ payload: PaginatedResponse<CombinedContentItem> }>('/api/search?pageSize=6&sortBy=updatedAt&order=desc')
                 ]);
 
                 setData({
