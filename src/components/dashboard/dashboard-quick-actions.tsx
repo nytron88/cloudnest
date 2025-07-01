@@ -54,8 +54,8 @@ export function DashboardQuickActions({
                                 Explore and manage your files
                             </p>
                         </div>
-                        <Button className="w-full">
-                            Open File Manager
+                        <Button className="w-full" asChild>
+                            <a href="/browse">Open File Manager</a>
                         </Button>
                     </div>
                 </CardContent>
