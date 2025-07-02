@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Filter, X, Star, Trash2, Grid, List } from 'lucide-react';
+import { Search, Filter, X, Star, Trash2, Grid, List, SortAsc, SortDesc } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -27,6 +27,7 @@ interface SearchBarProps {
     onTrashToggle: () => void;
     viewMode: 'grid' | 'list';
     onViewModeChange: (mode: 'grid' | 'list') => void;
+    hideFilters?: boolean;
 }
 
 export function SearchBar({
@@ -41,7 +42,8 @@ export function SearchBar({
     showTrash,
     onTrashToggle,
     viewMode,
-    onViewModeChange
+    onViewModeChange,
+    hideFilters = false
 }: SearchBarProps) {
     const [localSearch, setLocalSearch] = useState(searchTerm);
 
@@ -61,13 +63,13 @@ export function SearchBar({
             createdAt: 'Created',
             updatedAt: 'Modified'
         };
-        return `${labels[sortBy]} (${order === 'asc' ? 'A-Z' : 'Z-A'})`;
+        return labels[sortBy];
     };
 
     const hasActiveFilters = showStarred || showTrash || searchTerm;
 
     return (
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between bg-card p-4 rounded-lg border">
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
             {/* Search Input */}
             <form onSubmit={handleSearchSubmit} className="flex-1 max-w-md">
                 <div className="relative">
@@ -83,7 +85,7 @@ export function SearchBar({
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0 cursor-pointer"
                             onClick={clearSearch}
                         >
                             <X className="h-3 w-3" />
@@ -94,59 +96,65 @@ export function SearchBar({
 
             {/* Controls */}
             <div className="flex items-center gap-2">
-                {/* Filter Menu */}
+                {/* Sort Menu */}
+                {!hideFilters && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="gap-2">
-                            <Filter className={cn("h-4 w-4", hasActiveFilters && "text-blue-600")} />
-                            Filter
-                            {hasActiveFilters && (
-                                <span className="bg-blue-600 text-white text-xs rounded-full w-2 h-2"></span>
-                            )}
+                        <Button variant="outline" size="sm" className="gap-2 cursor-pointer">
+                            {order === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                            Sort: {getSortLabel()}
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel>View Options</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={onStarredToggle}>
-                            <Star className={cn("h-4 w-4 mr-2", showStarred && "fill-current text-amber-500")} />
-                            Starred only
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={onTrashToggle}>
-                            <Trash2 className={cn("h-4 w-4 mr-2", showTrash && "text-destructive")} />
-                            Trash
-                        </DropdownMenuItem>
-                        
-                        <DropdownMenuSeparator />
                         <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => onSortChange('name')}>
+                        <DropdownMenuItem onClick={() => onSortChange('name')} className="cursor-pointer">
                             Name {sortBy === 'name' && `(${order === 'asc' ? 'A-Z' : 'Z-A'})`}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onSortChange('updatedAt')}>
+                        <DropdownMenuItem onClick={() => onSortChange('updatedAt')} className="cursor-pointer">
                             Modified {sortBy === 'updatedAt' && `(${order === 'asc' ? 'Old-New' : 'New-Old'})`}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onSortChange('createdAt')}>
+                        <DropdownMenuItem onClick={() => onSortChange('createdAt')} className="cursor-pointer">
                             Created {sortBy === 'createdAt' && `(${order === 'asc' ? 'Old-New' : 'New-Old'})`}
                         </DropdownMenuItem>
                         
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => onOrderChange(order === 'asc' ? 'desc' : 'asc')}>
+                        <DropdownMenuItem onClick={() => onOrderChange(order === 'asc' ? 'desc' : 'asc')} className="cursor-pointer">
                             Reverse order
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
+                )}
 
-                {/* Sort Display */}
-                <Button variant="outline" size="sm" className="hidden sm:flex gap-2">
-                    <span className="text-sm text-muted-foreground">Sort:</span>
-                    <span className="text-sm font-medium">{getSortLabel()}</span>
-                </Button>
+                {/* Filter Menu */}
+                {!hideFilters && hasActiveFilters && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-2 cursor-pointer">
+                            <Filter className="h-4 w-4 text-blue-600" />
+                            Filter
+                            <span className="bg-blue-600 text-white text-xs rounded-full w-2 h-2"></span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel>View Options</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={onStarredToggle} className="cursor-pointer">
+                            <Star className={cn("h-4 w-4 mr-2", showStarred && "fill-current text-amber-500")} />
+                            Starred only
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={onTrashToggle} className="cursor-pointer">
+                            <Trash2 className={cn("h-4 w-4 mr-2", showTrash && "text-destructive")} />
+                            Trash
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                )}
 
                 {/* View Mode Toggle */}
                 <div className="flex border rounded-md">
                     <Button
                         variant={viewMode === 'grid' ? 'default' : 'ghost'}
                         size="sm"
-                        className="rounded-r-none"
+                        className="rounded-r-none px-3 cursor-pointer"
                         onClick={() => onViewModeChange('grid')}
                     >
                         <Grid className="h-4 w-4" />
@@ -154,7 +162,7 @@ export function SearchBar({
                     <Button
                         variant={viewMode === 'list' ? 'default' : 'ghost'}
                         size="sm"
-                        className="rounded-l-none"
+                        className="rounded-l-none px-3 cursor-pointer"
                         onClick={() => onViewModeChange('list')}
                     >
                         <List className="h-4 w-4" />
@@ -162,50 +170,18 @@ export function SearchBar({
                 </div>
             </div>
 
-            {/* Active Filters Display */}
-            {hasActiveFilters && (
-                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                    {searchTerm && (
-                        <div className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-2 py-1 rounded text-sm">
-                            <span>Search: "{searchTerm}"</span>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-4 w-4 p-0 text-blue-600 hover:text-blue-800"
-                                onClick={clearSearch}
-                            >
-                                <X className="h-3 w-3" />
-                            </Button>
-                        </div>
-                    )}
-                    {showStarred && (
-                        <div className="flex items-center gap-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-2 py-1 rounded text-sm">
-                            <Star className="h-3 w-3 fill-current" />
-                            <span>Starred</span>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-4 w-4 p-0 text-amber-600 hover:text-amber-800"
-                                onClick={onStarredToggle}
-                            >
-                                <X className="h-3 w-3" />
-                            </Button>
-                        </div>
-                    )}
-                    {showTrash && (
-                        <div className="flex items-center gap-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 px-2 py-1 rounded text-sm">
-                            <Trash2 className="h-3 w-3" />
-                            <span>Trash</span>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-4 w-4 p-0 text-red-600 hover:text-red-800"
-                                onClick={onTrashToggle}
-                            >
-                                <X className="h-3 w-3" />
-                            </Button>
-                        </div>
-                    )}
+            {/* Active Search Filter Display */}
+            {searchTerm && (
+                <div className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 px-3 py-1.5 rounded-md text-sm w-full sm:w-auto">
+                    <span>Search: "{searchTerm}"</span>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 text-blue-600 hover:text-blue-800 ml-1 cursor-pointer"
+                        onClick={clearSearch}
+                    >
+                        <X className="h-3 w-3" />
+                    </Button>
                 </div>
             )}
         </div>

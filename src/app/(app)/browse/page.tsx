@@ -14,16 +14,28 @@ import {
     BrowseLoadingSkeleton,
     Pagination
 } from '@/components/browse';
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbList,
+    BreadcrumbPage,
+} from "@/components/ui/breadcrumb";
 import { CombinedContentItem } from '@/types/folder';
 import { PaginatedResponse } from '@/types/pagination';
 import { APIResponse } from '@/types/apiResponse';
 import { UserProfileResponseData } from '@/types/user';
+import { getStorageLimit } from '@/lib/utils/dashboard-helpers';
+import { useBrowseContext } from './layout';
 
 interface BreadcrumbItem {
     id: string | null;
     name: string;
     path: string;
 }
+
+type ViewType = 'all' | 'recent' | 'starred' | 'trash';
 
 interface BrowseState {
     items: CombinedContentItem[];
@@ -37,14 +49,12 @@ interface BrowseState {
     searchTerm: string;
     sortBy: 'name' | 'createdAt' | 'updatedAt';
     order: 'asc' | 'desc';
-    showStarred: boolean;
-    showTrash: boolean;
     viewMode: 'grid' | 'list';
-    userProfile: UserProfileResponseData | null;
 }
 
 export default function BrowsePage() {
     const { user, isLoaded: userLoaded } = useUser();
+    const { currentView, setCurrentView, userProfile } = useBrowseContext();
     const [state, setState] = useState<BrowseState>({
         items: [],
         loading: true,
@@ -57,10 +67,7 @@ export default function BrowsePage() {
         searchTerm: '',
         sortBy: 'name',
         order: 'asc',
-        showStarred: false,
-        showTrash: false,
-        viewMode: 'grid',
-        userProfile: null
+        viewMode: 'grid'
     });
 
     const fetchContent = useCallback(async () => {
@@ -74,10 +81,23 @@ export default function BrowsePage() {
                 order: state.order,
             });
 
-            if (state.currentFolderId) params.append('folderId', state.currentFolderId);
+            // Handle different view types
+            if (currentView === 'recent') {
+                // For recent view, don't specify folder and add recent sorting
+                params.set('sortBy', 'updatedAt');
+                params.set('order', 'desc');
+            } else if (currentView === 'starred') {
+                params.append('isStarred', 'true');
+                if (state.currentFolderId) params.append('folderId', state.currentFolderId);
+            } else if (currentView === 'trash') {
+                params.append('isTrash', 'true');
+                if (state.currentFolderId) params.append('folderId', state.currentFolderId);
+            } else {
+                // All files view
+                if (state.currentFolderId) params.append('folderId', state.currentFolderId);
+            }
+
             if (state.searchTerm) params.append('search', state.searchTerm);
-            if (state.showStarred) params.append('isStarred', 'true');
-            if (state.showTrash) params.append('isTrash', 'true');
 
             const response = await axios.get<APIResponse<PaginatedResponse<CombinedContentItem>>>(
                 `/api/search?${params.toString()}`
@@ -106,28 +126,41 @@ export default function BrowsePage() {
                 loading: false
             }));
         }
-    }, [state.currentPage, state.currentFolderId, state.searchTerm, state.sortBy, state.order, state.showStarred, state.showTrash]);
-
-    const fetchUserProfile = useCallback(async () => {
-        try {
-            const response = await axios.get<APIResponse<UserProfileResponseData>>('/api/user/me');
-            if (response.data.success) {
-                setState(prev => ({ ...prev, userProfile: response.data.payload || null }));
-            }
-        } catch (error) {
-            console.error('Failed to fetch user profile:', error);
-        }
-    }, []);
+    }, [state.currentPage, state.currentFolderId, state.searchTerm, state.sortBy, state.order, currentView]);
 
     useEffect(() => {
         if (userLoaded) {
             fetchContent();
-            fetchUserProfile();
         }
-    }, [userLoaded, fetchContent, fetchUserProfile]);
+    }, [userLoaded, fetchContent]);
+
+    const handleViewChange = (view: ViewType) => {
+        setCurrentView(view);
+        setState(prev => ({ 
+            ...prev, 
+            currentPage: 1,
+            currentFolderId: null, // Reset folder navigation when changing views
+            breadcrumbs: [{ id: null, name: getViewDisplayName(view), path: '/' }],
+            searchTerm: '' // Clear search when changing views
+        }));
+    };
+
+    const getViewDisplayName = (view: ViewType) => {
+        switch (view) {
+            case 'all': return 'All Files';
+            case 'recent': return 'Recent';
+            case 'starred': return 'Starred';
+            case 'trash': return 'Trash';
+            default: return 'All Files';
+        }
+    };
 
     const handleFolderClick = (folderId: string) => {
-        // Find the folder to navigate to
+        // Don't allow folder navigation in trash or recent views
+        if (currentView === 'trash' || currentView === 'recent') {
+            return;
+        }
+
         const folder = state.items.find(item => item.id === folderId && item.type === 'folder');
         if (folder) {
             const newBreadcrumb = {
@@ -264,14 +297,6 @@ export default function BrowsePage() {
         setState(prev => ({ ...prev, order, currentPage: 1 }));
     };
 
-    const handleStarredToggle = () => {
-        setState(prev => ({ ...prev, showStarred: !prev.showStarred, currentPage: 1 }));
-    };
-
-    const handleTrashToggle = () => {
-        setState(prev => ({ ...prev, showTrash: !prev.showTrash, currentPage: 1 }));
-    };
-
     const handleViewModeChange = (viewMode: 'grid' | 'list') => {
         setState(prev => ({ ...prev, viewMode }));
     };
@@ -285,14 +310,27 @@ export default function BrowsePage() {
         fetchContent();
     };
 
-    if (!userLoaded || (state.loading && state.items.length === 0)) {
+    // Show skeleton for initial load OR when refreshing (loading with existing items)
+    if (!userLoaded || state.loading) {
         return <BrowseLoadingSkeleton />;
     }
 
     if (state.error && state.items.length === 0) {
         return (
-            <div className="min-h-screen bg-background">
-                <div className="container max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
+            <>
+                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                    <SidebarTrigger className="-ml-1" />
+                    <Separator orientation="vertical" className="mr-2 h-4" />
+                    <Breadcrumb>
+                        <BreadcrumbList>
+                            <BreadcrumbItem>
+                                <BreadcrumbPage>Error</BreadcrumbPage>
+                            </BreadcrumbItem>
+                        </BreadcrumbList>
+                    </Breadcrumb>
+                </header>
+                
+                <div className="flex flex-1 flex-col gap-4 p-4">
                     <Card>
                         <CardContent className="pt-6">
                             <div className="text-center">
@@ -304,99 +342,122 @@ export default function BrowsePage() {
                         </CardContent>
                     </Card>
                 </div>
-            </div>
+            </>
         );
     }
 
-    const currentPlan = state.userProfile?.subscription?.plan || 'FREE';
+    const currentPlan = userProfile?.subscription?.plan || 'FREE';
+    const canNavigateFolders = currentView === 'all' || currentView === 'starred';
 
     return (
-        <div className="min-h-screen bg-background">
-            <div className="container max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
-                <BrowseHeader
-                    currentFolderId={state.currentFolderId}
-                    onRefresh={handleRefresh}
-                    onFolderCreated={handleFolderCreated}
-                    onUploadSuccess={handleUploadSuccess}
-                    isLoading={state.loading}
-                    userPlan={currentPlan as 'FREE' | 'PRO_MONTHLY' | 'PRO_YEARLY'}
-                />
-
-                <BreadcrumbNav
-                    currentPath={state.breadcrumbs}
-                    onNavigate={handleBreadcrumbNavigation}
-                    className="mb-4"
-                />
-
-                <SearchBar
-                    searchTerm={state.searchTerm}
-                    onSearchChange={handleSearchChange}
-                    sortBy={state.sortBy}
-                    onSortChange={handleSortChange}
-                    order={state.order}
-                    onOrderChange={handleOrderChange}
-                    showStarred={state.showStarred}
-                    onStarredToggle={handleStarredToggle}
-                    showTrash={state.showTrash}
-                    onTrashToggle={handleTrashToggle}
-                    viewMode={state.viewMode}
-                    onViewModeChange={handleViewModeChange}
-                />
-
-                <div className="flex items-center justify-between mb-4 text-sm text-muted-foreground">
-                    <span>
-                        {state.totalItems} {state.totalItems === 1 ? 'item' : 'items'}
-                        {state.searchTerm && ` matching "${state.searchTerm}"`}
-                    </span>
-                    {state.loading && <span>Loading...</span>}
-                </div>
-
-                {state.items.length > 0 ? (
-                    <>
-                        <FileGrid
-                            items={state.items}
-                            onFolderClick={handleFolderClick}
-                            onStarToggle={handleStarToggle}
-                            onTrash={handleTrash}
-                            onRename={handleRename}
-                            onMove={handleMove}
-                            onShare={handleShare}
-                            viewMode={state.viewMode}
+        <>
+                {/* Header */}
+                <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                    <SidebarTrigger className="-ml-1" />
+                    <Separator orientation="vertical" className="mr-2 h-4" />
+                    <Breadcrumb>
+                        <BreadcrumbList>
+                            <BreadcrumbItem>
+                                <BreadcrumbPage className="line-clamp-1">
+                                    {getViewDisplayName(currentView)}
+                                </BreadcrumbPage>
+                            </BreadcrumbItem>
+                        </BreadcrumbList>
+                    </Breadcrumb>
+                    
+                    <div className="ml-auto">
+                        <BrowseHeader
+                            currentFolderId={state.currentFolderId}
+                            onRefresh={handleRefresh}
+                            onFolderCreated={handleFolderCreated}
+                            onUploadSuccess={handleUploadSuccess}
+                            isLoading={state.loading}
+                            userPlan={currentPlan as 'FREE' | 'PRO_MONTHLY' | 'PRO_YEARLY'}
                         />
+                    </div>
+                </header>
 
-                        {state.totalPages > 1 && (
-                            <Pagination
-                                currentPage={state.currentPage}
-                                totalPages={state.totalPages}
-                                onPageChange={handlePageChange}
-                                className="mt-8"
+                {/* Content Area */}
+                <div className="flex flex-1 flex-col gap-4 p-4">
+                    {/* Breadcrumb - only show for folder navigation views */}
+                    {canNavigateFolders && state.breadcrumbs.length > 1 && (
+                        <BreadcrumbNav
+                            currentPath={state.breadcrumbs}
+                            onNavigate={handleBreadcrumbNavigation}
+                        />
+                    )}
+
+                    <SearchBar
+                        searchTerm={state.searchTerm}
+                        onSearchChange={handleSearchChange}
+                        sortBy={state.sortBy}
+                        onSortChange={handleSortChange}
+                        order={state.order}
+                        onOrderChange={handleOrderChange}
+                        showStarred={false} // Handled by sidebar
+                        onStarredToggle={() => {}} // Not used
+                        showTrash={false} // Handled by sidebar
+                        onTrashToggle={() => {}} // Not used
+                        viewMode={state.viewMode}
+                        onViewModeChange={handleViewModeChange}
+                        hideFilters={currentView !== 'all'} // Hide filters for special views
+                    />
+
+                    <div className="flex items-center justify-between mb-4 text-sm text-muted-foreground">
+                        <span>
+                            {state.totalItems} {state.totalItems === 1 ? 'item' : 'items'}
+                            {state.searchTerm && ` matching "${state.searchTerm}"`}
+                        </span>
+                    </div>
+
+                    {state.items.length > 0 ? (
+                        <>
+                            <FileGrid
+                                items={state.items}
+                                onFolderClick={canNavigateFolders ? handleFolderClick : () => {}}
+                                onStarToggle={handleStarToggle}
+                                onTrash={handleTrash}
+                                onRename={handleRename}
+                                onMove={handleMove}
+                                onShare={handleShare}
+                                viewMode={state.viewMode}
                             />
-                        )}
-                    </>
-                ) : (
-                    <Card>
-                        <CardContent className="pt-6">
-                            <div className="text-center py-12">
-                                <p className="text-muted-foreground text-lg mb-4">
-                                    {state.searchTerm 
-                                        ? `No items found matching "${state.searchTerm}"`
-                                        : state.showTrash
-                                        ? 'Trash is empty'
-                                        : state.showStarred
-                                        ? 'No starred items'
-                                        : 'This folder is empty'
-                                    }
-                                </p>
-                                {!state.searchTerm && !state.showTrash && !state.showStarred && (
-                                    <p className="text-sm text-muted-foreground">
-                                        Start organizing your files by uploading or creating folders
+
+                            {state.totalPages > 1 && (
+                                <Pagination
+                                    currentPage={state.currentPage}
+                                    totalPages={state.totalPages}
+                                    onPageChange={handlePageChange}
+                                    className="mt-8"
+                                />
+                            )}
+                        </>
+                    ) : (
+                        <Card>
+                            <CardContent className="pt-6">
+                                <div className="text-center py-12">
+                                    <p className="text-muted-foreground text-lg mb-4">
+                                        {state.searchTerm 
+                                            ? `No items found matching "${state.searchTerm}"`
+                                            : currentView === 'trash'
+                                            ? 'Trash is empty'
+                                            : currentView === 'starred'
+                                            ? 'No starred items'
+                                            : currentView === 'recent'
+                                            ? 'No recent activity'
+                                            : 'This folder is empty'
+                                        }
                                     </p>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-            </div>
-        </div>
+                                    {!state.searchTerm && currentView === 'all' && (
+                                        <p className="text-sm text-muted-foreground">
+                                            Start organizing your files by uploading or creating folders
+                                        </p>
+                                    )}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+            </>
     );
 }

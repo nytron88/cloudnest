@@ -1,32 +1,40 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
+import {
+    Breadcrumb,
+    BreadcrumbItem,
+    BreadcrumbList,
+    BreadcrumbPage,
+} from "@/components/ui/breadcrumb";
 
 export function BrowseLoadingSkeleton() {
     return (
-        <div className="min-h-screen bg-background">
-            <div className="container max-w-7xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
-                {/* Header Skeleton */}
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <Skeleton className="h-8 w-40 mb-2" />
-                        <Skeleton className="h-4 w-60" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Skeleton className="h-9 w-20" />
-                        <Skeleton className="h-9 w-16" />
-                        <Skeleton className="h-9 w-20" />
-                    </div>
+        <>
+            {/* Header Skeleton */}
+            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                <SidebarTrigger className="-ml-1" />
+                <Separator orientation="vertical" className="mr-2 h-4" />
+                <Breadcrumb>
+                    <BreadcrumbList>
+                        <BreadcrumbItem>
+                            <BreadcrumbPage>
+                                <Skeleton className="h-5 w-24" />
+                            </BreadcrumbPage>
+                        </BreadcrumbItem>
+                    </BreadcrumbList>
+                </Breadcrumb>
+                
+                <div className="ml-auto">
+                    <Skeleton className="h-9 w-32" />
                 </div>
+            </header>
 
-                {/* Breadcrumb Skeleton */}
-                <div className="flex items-center gap-2 mb-4">
-                    <Skeleton className="h-6 w-12" />
-                    <Skeleton className="h-4 w-4" />
-                    <Skeleton className="h-6 w-20" />
-                </div>
-
+            {/* Content Area Skeleton */}
+            <div className="flex flex-1 flex-col gap-4 p-4">
                 {/* Search Bar Skeleton */}
-                <Card className="mb-6">
+                <Card>
                     <CardContent className="p-4">
                         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
                             <Skeleton className="h-10 w-full max-w-md" />
@@ -48,7 +56,7 @@ export function BrowseLoadingSkeleton() {
                 {/* File Grid Skeleton */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                     {Array.from({ length: 24 }).map((_, i) => (
-                        <Card key={i} className="relative">
+                        <Card key={i} className="relative group hover:shadow-md transition-shadow">
                             <CardContent className="p-4">
                                 <div className="mb-3 flex items-center justify-center h-24">
                                     <Skeleton className="w-16 h-16 rounded" />
@@ -75,6 +83,6 @@ export function BrowseLoadingSkeleton() {
                     <Skeleton className="h-9 w-24" />
                 </div>
             </div>
-        </div>
+        </>
     );
 } 

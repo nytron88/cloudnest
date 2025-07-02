@@ -32,21 +32,14 @@ export function BrowseHeader({
     const [showCreateFolder, setShowCreateFolder] = useState(false);
 
     return (
-        <div className="flex items-center justify-between mb-6">
-            <div>
-                <h1 className="text-2xl sm:text-3xl font-bold">Browse Files</h1>
-                <p className="text-sm sm:text-base text-muted-foreground">
-                    Manage and organize your files and folders
-                </p>
-            </div>
-
+        <>
             <div className="flex items-center gap-2">
                 <Button
                     variant="outline"
                     size="sm"
                     onClick={onRefresh}
                     disabled={isLoading}
-                    className="gap-2"
+                    className="gap-2 cursor-pointer"
                 >
                     <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                     <span className="hidden sm:inline">Refresh</span>
@@ -54,13 +47,13 @@ export function BrowseHeader({
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button className="gap-2">
+                        <Button className="gap-2 cursor-pointer">
                             <Plus className="h-4 w-4" />
                             <span className="hidden sm:inline">New</span>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setShowCreateFolder(true)}>
+                        <DropdownMenuItem onClick={() => setShowCreateFolder(true)} className="cursor-pointer">
                             <FolderPlus className="h-4 w-4 mr-2" />
                             Create Folder
                         </DropdownMenuItem>
@@ -72,7 +65,7 @@ export function BrowseHeader({
                     userPlan={userPlan}
                     onUploadSuccess={onUploadSuccess}
                     trigger={
-                        <Button className="gap-2">
+                        <Button className="gap-2 cursor-pointer">
                             <Upload className="h-4 w-4" />
                             <span className="hidden sm:inline">Upload</span>
                         </Button>
@@ -86,6 +79,6 @@ export function BrowseHeader({
                 parentId={currentFolderId}
                 onSuccess={onFolderCreated}
             />
-        </div>
+        </>
     );
 } 
