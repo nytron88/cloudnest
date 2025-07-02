@@ -35,6 +35,30 @@ export default function BrowseLayout({ children }: { children: ReactNode }) {
     const [currentView, setCurrentView] = useState<ViewType>('all');
     const [userProfile, setUserProfile] = useState<UserProfileResponseData | null>(null);
 
+    // Initialize view from localStorage on mount
+    useEffect(() => {
+        try {
+            const savedView = localStorage.getItem('cloudnest-browse-view');
+            if (savedView && ['all', 'recent', 'starred', 'trash'].includes(savedView)) {
+                setCurrentView(savedView as ViewType);
+            }
+        } catch (error) {
+            // localStorage might not be available in some environments
+            console.warn('Failed to load browse view from localStorage:', error);
+        }
+    }, []);
+
+    // Save view to localStorage whenever it changes
+    const handleViewChange = (view: ViewType) => {
+        setCurrentView(view);
+        try {
+            localStorage.setItem('cloudnest-browse-view', view);
+        } catch (error) {
+            // localStorage might not be available in some environments
+            console.warn('Failed to save browse view to localStorage:', error);
+        }
+    };
+
     useEffect(() => {
         const fetchUserProfile = async () => {
             if (!userLoaded) return;
@@ -53,12 +77,12 @@ export default function BrowseLayout({ children }: { children: ReactNode }) {
     }, [userLoaded]);
 
     return (
-        <BrowseContext.Provider value={{ currentView, setCurrentView, userProfile }}>
+        <BrowseContext.Provider value={{ currentView, setCurrentView: handleViewChange, userProfile }}>
             <SidebarProvider>
                 <div className="flex h-screen w-full">
                     <BrowseSidebar 
                         currentView={currentView}
-                        onViewChange={setCurrentView}
+                        onViewChange={handleViewChange}
                         storageUsed={userProfile?.usedStorage || 0}
                         storageLimit={getStorageLimit(userProfile?.subscription?.plan || null)}
                     />

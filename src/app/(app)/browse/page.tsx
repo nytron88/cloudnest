@@ -25,8 +25,6 @@ import {
 import { CombinedContentItem } from '@/types/folder';
 import { PaginatedResponse } from '@/types/pagination';
 import { APIResponse } from '@/types/apiResponse';
-import { UserProfileResponseData } from '@/types/user';
-import { getStorageLimit } from '@/lib/utils/dashboard-helpers';
 import { useBrowseContext } from './layout';
 
 interface BreadcrumbItem {
@@ -53,7 +51,7 @@ interface BrowseState {
 }
 
 export default function BrowsePage() {
-    const { user, isLoaded: userLoaded } = useUser();
+    const { isLoaded: userLoaded } = useUser();
     const { currentView, setCurrentView, userProfile } = useBrowseContext();
     const [state, setState] = useState<BrowseState>({
         items: [],
@@ -81,26 +79,34 @@ export default function BrowsePage() {
                 order: state.order,
             });
 
-            // Handle different view types
-            if (currentView === 'recent') {
-                // For recent view, don't specify folder and add recent sorting
-                params.set('sortBy', 'updatedAt');
-                params.set('order', 'desc');
-            } else if (currentView === 'starred') {
-                params.append('isStarred', 'true');
-                if (state.currentFolderId) params.append('folderId', state.currentFolderId);
-            } else if (currentView === 'trash') {
-                params.append('isTrash', 'true');
-                if (state.currentFolderId) params.append('folderId', state.currentFolderId);
-            } else {
-                // All files view
-                if (state.currentFolderId) params.append('folderId', state.currentFolderId);
-            }
-
             if (state.searchTerm) params.append('search', state.searchTerm);
 
+            let endpoint: string;
+
+            // Use the correct API endpoint for each view type
+            if (currentView === 'recent') {
+                // Use recent-content endpoint for recent view
+                endpoint = '/api/recent-content';
+                params.set('sortBy', 'updatedAt');
+                params.set('order', 'desc');
+            } else {
+                // Use search endpoint for all other views (all, starred, trash)
+                endpoint = '/api/search';
+                
+                if (currentView === 'starred') {
+                    params.append('isStarred', 'true');
+                    if (state.currentFolderId) params.append('folderId', state.currentFolderId);
+                } else if (currentView === 'trash') {
+                    params.append('isTrash', 'true');
+                    if (state.currentFolderId) params.append('folderId', state.currentFolderId);
+                } else {
+                    // All files view
+                    if (state.currentFolderId) params.append('folderId', state.currentFolderId);
+                }
+            }
+
             const response = await axios.get<APIResponse<PaginatedResponse<CombinedContentItem>>>(
-                `/api/search?${params.toString()}`
+                `${endpoint}?${params.toString()}`
             );
 
             if (response.data.success && response.data.payload) {
