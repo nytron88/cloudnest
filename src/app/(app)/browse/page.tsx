@@ -101,6 +101,7 @@ export default function BrowsePage() {
                     if (state.currentFolderId) params.append('folderId', state.currentFolderId);
                 } else {
                     // All files view
+                    params.append('isTrash', 'false');
                     if (state.currentFolderId) params.append('folderId', state.currentFolderId);
                 }
             }
